@@ -1,0 +1,44 @@
+name: task_flow_app
+description: "A new Flutter project."
+
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_launcher_icons: ^0.14.3
+  go_router: ^13.1.0
+  flutter_riverpod: ^2.3.6
+  shared_preferences: ^2.1.1
+  dio: ^5.4.0
+  cupertino_icons: ^1.0.8
+  http: ^1.4.0
+  intl: ^0.18.0
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/
+    - assets/images/
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: false
+  image_path: "assets/images/logov1.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "#2D2D2D"
+  adaptive_icon_foreground: "assets/images/logov1.png"
+# flutter pub run flutter_launcher_icons:main
