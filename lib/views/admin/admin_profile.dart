@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/user_model.dart';
 import '../../services/user_service.dart';
-import '../../services/auth_service.dart';
 import '../../state/auth_state.dart';
 
 class AdminProfileScreen extends ConsumerStatefulWidget {

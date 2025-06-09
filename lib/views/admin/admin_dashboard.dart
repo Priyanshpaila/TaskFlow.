@@ -4,11 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-// Remove this line:
-// import 'package:fl_chart/fl_chart.dart';
-
-// Add this instead if using Syncfusion:
-// import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:intl/intl.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/user_provider.dart';
@@ -28,13 +23,6 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
   late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
   bool _showFab = true;
-  String _selectedTimeRange = 'This Week';
-  final List<String> _timeRanges = [
-    'Today',
-    'This Week',
-    'This Month',
-    'All Time',
-  ];
 
   @override
   void initState() {
@@ -68,7 +56,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
   Widget build(BuildContext context) {
     final taskAsync = ref.watch(taskListProvider);
     final usersAsync = ref.watch(userListProvider);
-    final theme = Theme.of(context);
+  
     final now = DateTime.now();
     final greeting = _getGreeting();
     final date = DateFormat('EEEE, MMMM d').format(now);
@@ -115,8 +103,8 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
         data: (tasks) {
           return RefreshIndicator(
             onRefresh: () async {
-              ref.refresh(taskListProvider);
-              ref.refresh(userListProvider);
+              ref.invalidate(taskListProvider);
+              ref.invalidate(userListProvider);
             },
             color: const Color(0xFF6C63FF),
             child: CustomScrollView(
@@ -1311,203 +1299,8 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
     );
   }
 
-  // void _showNotificationsPanel() {
-  //   showModalBottomSheet(
-  //     context: context,
-  //     isScrollControlled: true,
-  //     backgroundColor: Colors.transparent,
-  //     builder:
-  //         (context) => Container(
-  //           height: MediaQuery.of(context).size.height * 0.7,
-  //           decoration: const BoxDecoration(
-  //             color: Colors.white,
-  //             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-  //           ),
-  //           child: Column(
-  //             children: [
-  //               // Handle bar
-  //               Container(
-  //                 width: 40,
-  //                 height: 4,
-  //                 margin: const EdgeInsets.symmetric(vertical: 12),
-  //                 decoration: BoxDecoration(
-  //                   color: Colors.grey.shade300,
-  //                   borderRadius: BorderRadius.circular(2),
-  //                 ),
-  //               ),
 
-  //               // Header
-  //               Padding(
-  //                 padding: const EdgeInsets.symmetric(horizontal: 20),
-  //                 child: Row(
-  //                   children: [
-  //                     Text(
-  //                       "Notifications",
-  //                       style: GoogleFonts.poppins(
-  //                         fontSize: 20,
-  //                         fontWeight: FontWeight.bold,
-  //                       ),
-  //                     ),
-  //                     const Spacer(),
-  //                     TextButton(
-  //                       onPressed: () {
-  //                         // Mark all as read
-  //                         Navigator.pop(context);
-  //                       },
-  //                       child: Text(
-  //                         "Mark all as read",
-  //                         style: GoogleFonts.poppins(
-  //                           fontSize: 12,
-  //                           color: const Color(0xFF6C63FF),
-  //                         ),
-  //                       ),
-  //                     ),
-  //                   ],
-  //                 ),
-  //               ),
 
-  //               const Divider(),
-
-  //               // Notifications list
-  //               Expanded(
-  //                 child: ListView(
-  //                   padding: const EdgeInsets.all(20),
-  //                   children: [
-  //                     _buildNotificationItem(
-  //                       "New Task Assigned",
-  //                       "You have been assigned to 'Update Dashboard UI'",
-  //                       "2 hours ago",
-  //                       Icons.assignment,
-  //                       Colors.blue,
-  //                       isUnread: true,
-  //                     ),
-  //                     _buildNotificationItem(
-  //                       "Task Completed",
-  //                       "John Smith completed 'Fix Login Issues'",
-  //                       "Yesterday",
-  //                       Icons.check_circle,
-  //                       Colors.green,
-  //                       isUnread: true,
-  //                     ),
-  //                     _buildNotificationItem(
-  //                       "Deadline Approaching",
-  //                       "Task 'Implement User Authentication' is due tomorrow",
-  //                       "Yesterday",
-  //                       Icons.warning,
-  //                       Colors.orange,
-  //                       isUnread: true,
-  //                     ),
-  //                     _buildNotificationItem(
-  //                       "New Comment",
-  //                       "Sarah added a comment to 'Database Migration'",
-  //                       "2 days ago",
-  //                       Icons.comment,
-  //                       Colors.purple,
-  //                     ),
-  //                     _buildNotificationItem(
-  //                       "Task Updated",
-  //                       "Priority changed for 'API Integration'",
-  //                       "3 days ago",
-  //                       Icons.update,
-  //                       Colors.teal,
-  //                     ),
-  //                   ],
-  //                 ),
-  //               ),
-  //             ],
-  //           ),
-  //         ),
-  //   );
-  // }
-
-  // Widget _buildNotificationItem(
-  //   String title,
-  //   String message,
-  //   String time,
-  //   IconData icon,
-  //   Color color, {
-  //   bool isUnread = false,
-  // }) {
-  //   return Container(
-  //     margin: const EdgeInsets.only(bottom: 16),
-  //     decoration: BoxDecoration(
-  //       color: isUnread ? color.withOpacity(0.05) : Colors.white,
-  //       borderRadius: BorderRadius.circular(16),
-  //       border: Border.all(
-  //         color: isUnread ? color.withOpacity(0.3) : Colors.grey.shade200,
-  //       ),
-  //     ),
-  //     child: ListTile(
-  //       contentPadding: const EdgeInsets.all(16),
-  //       leading: Container(
-  //         padding: const EdgeInsets.all(12),
-  //         decoration: BoxDecoration(
-  //           color: color.withOpacity(0.1),
-  //           borderRadius: BorderRadius.circular(12),
-  //         ),
-  //         child: Icon(icon, color: color),
-  //       ),
-  //       title: Row(
-  //         children: [
-  //           Expanded(
-  //             child: Text(
-  //               title,
-  //               style: GoogleFonts.poppins(
-  //                 fontWeight: isUnread ? FontWeight.w600 : FontWeight.w500,
-  //                 fontSize: 14,
-  //               ),
-  //             ),
-  //           ),
-  //           if (isUnread)
-  //             Container(
-  //               width: 8,
-  //               height: 8,
-  //               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-  //             ),
-  //         ],
-  //       ),
-  //       subtitle: Column(
-  //         crossAxisAlignment: CrossAxisAlignment.start,
-  //         children: [
-  //           const SizedBox(height: 4),
-  //           Text(
-  //             message,
-  //             style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
-  //           ),
-  //           const SizedBox(height: 8),
-  //           Text(
-  //             time,
-  //             style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey),
-  //           ),
-  //         ],
-  //       ),
-  //       onTap: () {
-  //         // Handle notification tap
-  //         Navigator.pop(context);
-  //       },
-  //     ),
-  //   );
-  // }
-
-  void _toggleTaskStatus(dynamic task) {
-    // In a real app, this would call an API to update the task status
-    // For now, we'll just show a snackbar
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          task.status == 'completed'
-              ? "Task reopened successfully"
-              : "Task marked as completed",
-          style: GoogleFonts.poppins(),
-        ),
-        backgroundColor:
-            task.status == 'complete' ? Colors.orange : Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
-  }
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
