@@ -11,6 +11,7 @@ final authStateProvider =
 
 class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   final Ref ref;
+
   AuthNotifier(this.ref) : super(const AsyncValue.loading()) {
     _loadUser();
   }
@@ -30,16 +31,19 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     }
   }
 
+  // ✅ Updated signup to accept division
   Future<void> signup(
     String username,
     String email,
     String pass,
     String confirm,
+    String division, // ✅ Added parameter
   ) async {
     state = const AsyncValue.loading();
     final msg = await ref
         .read(authServiceProvider)
-        .signup(username, email, pass, confirm);
+        .signup(username, email, pass, confirm, division); // ✅ Passed in call
+
     if (msg == null) {
       await login(email, pass);
     } else {

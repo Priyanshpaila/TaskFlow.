@@ -18,6 +18,7 @@ class UserDashboard extends ConsumerStatefulWidget {
 class _UserDashboardState extends ConsumerState<UserDashboard>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int _selectedDrawerIndex = 0;
 
   final List<String> filters = [
     'All',
@@ -91,7 +92,6 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-         
           children: [
             const Text(
               'My Tasks',
@@ -106,13 +106,7 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
-        // actions: [
-        //   IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-        //   IconButton(
-        //     icon: const Icon(Icons.notifications_none),
-        //     onPressed: () {},
-        //   ),
-        // ],
+
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Container(
@@ -144,8 +138,15 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
               tabs:
                   filters
                       .map(
-                        (f) =>
-                            Tab(text: f, icon: Icon(filterIcons[f], size: 20)),
+                        (f) => Tab(
+                          child: Row(
+                            children: [
+                              Icon(filterIcons[f], size: 18),
+                              const SizedBox(width: 8),
+                              Text(f),
+                            ],
+                          ),
+                        ),
                       )
                       .toList(),
             ),
@@ -189,42 +190,68 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
         SliverPadding(
           padding: const EdgeInsets.all(16),
           sliver: SliverToBoxAdapter(
-            child: Row(
-              children: [
-                Icon(
-                  filterIcons[filter],
-                  color: _getFilterColor(filter),
-                  size: 20,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    _getFilterColor(filter).withOpacity(0.7),
+                    _getFilterColor(filter),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  "$filter Tasks",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: _getFilterColor(filter),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: _getFilterColor(filter).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                ],
+              ),
+              child: Row(
+                children: [
+                  Icon(filterIcons[filter], color: Colors.white, size: 24),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "$filter Tasks",
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        "${filtered.length} ${filtered.length == 1 ? 'task' : 'tasks'} to manage",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                    ],
                   ),
-                  decoration: BoxDecoration(
-                    color: _getFilterColor(filter).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    "${filtered.length} ${filtered.length == 1 ? 'task' : 'tasks'}",
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: _getFilterColor(filter),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      "${filtered.length}",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -259,16 +286,27 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Padding(
-          padding: const EdgeInsets.all(32.0),
+          padding: const EdgeInsets.all(28.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(filterIcons[filter], size: 80, color: Colors.grey.shade300),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: _getFilterColor(filter).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  filterIcons[filter],
+                  size: 80,
+                  color: _getFilterColor(filter).withOpacity(0.7),
+                ),
+              ),
               const SizedBox(height: 24),
               Text(
                 "No $filter Tasks",
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: Colors.grey.shade800,
                 ),
@@ -405,16 +443,123 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
               ],
             ),
           ),
-          // const Spacer(),
+          const SizedBox(height: 16),
+
+          // Beautiful Drawer Tiles
+          _buildDrawerTile(
+            icon: Icons.dashboard_rounded,
+            title: "Dashboard",
+            index: 0,
+          ),
+
+          _buildDrawerTile(
+            icon: Icons.person_outline,
+            title: "My Profile",
+            index: 1,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/profile');
+            },
+          ),
+
+          // _buildDrawerTile(
+          //   icon: Icons.calendar_today_outlined,
+          //   title: "Calendar",
+          //   index: 2,
+          //   badge: "3",
+          // ),
+
+          // _buildDrawerTile(
+          //   icon: Icons.analytics_outlined,
+          //   title: "Analytics",
+          //   index: 3,
+          // ),
+
+          // _buildDrawerTile(
+          //   icon: Icons.settings_outlined,
+          //   title: "Settings",
+          //   index: 4,
+          // ),
+
+          // Padding(
+          //   padding: const EdgeInsets.symmetric(horizontal: 16),
+          //   child: Container(
+          //     padding: const EdgeInsets.all(16),
+          //     decoration: BoxDecoration(
+          //       color: Colors.deepPurple.shade50,
+          //       borderRadius: BorderRadius.circular(16),
+          //     ),
+          //     child: Row(
+          //       children: [
+          //         Container(
+          //           padding: const EdgeInsets.all(10),
+          //           decoration: BoxDecoration(
+          //             color: Colors.deepPurple.shade100,
+          //             borderRadius: BorderRadius.circular(12),
+          //           ),
+          //           child: const Icon(
+          //             Icons.headset_mic_outlined,
+          //             color: Colors.deepPurple,
+          //             size: 24,
+          //           ),
+          //         ),
+          //         const SizedBox(width: 12),
+          //         Expanded(
+          //           child: Column(
+          //             crossAxisAlignment: CrossAxisAlignment.start,
+          //             children: [
+          //               const Text(
+          //                 "Need Help?",
+          //                 style: TextStyle(
+          //                   fontWeight: FontWeight.bold,
+          //                   fontSize: 16,
+          //                   color: Colors.deepPurple,
+          //                 ),
+          //               ),
+          //               const SizedBox(height: 4),
+          //               Text(
+          //                 "Contact our support team",
+          //                 style: TextStyle(
+          //                   fontSize: 12,
+          //                   color: Colors.grey.shade700,
+          //                 ),
+          //               ),
+          //             ],
+          //           ),
+          //         ),
+          //         const Icon(
+          //           Icons.arrow_forward_ios,
+          //           size: 14,
+          //           color: Colors.deepPurple,
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // ),
+          const Spacer(),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Divider(height: 32),
+          ),
+
           Padding(
             padding: const EdgeInsets.all(16),
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.red.shade300, Colors.red.shade700],
+                  colors: [Colors.red.shade400, Colors.red.shade700],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Material(
                 color: Colors.transparent,
@@ -427,20 +572,21 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
                       (_) => false,
                     );
                   },
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: const [
                         Icon(Icons.logout, color: Colors.white, size: 20),
-                        SizedBox(width: 8),
+                        SizedBox(width: 10),
                         Text(
-                          "Logout",
+                          "LOGOUT",
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
+                            letterSpacing: 1,
                           ),
                         ),
                       ],
@@ -456,6 +602,111 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
     );
   }
 
+  Widget _buildDrawerTile({
+    required IconData icon,
+    required String title,
+    required int index,
+    String? badge,
+    VoidCallback? onTap,
+  }) {
+    final isSelected = _selectedDrawerIndex == index;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap:
+              onTap ??
+              () {
+                setState(() {
+                  _selectedDrawerIndex = index;
+                });
+                Navigator.pop(context);
+              },
+          borderRadius: BorderRadius.circular(16),
+          child: Ink(
+            decoration: BoxDecoration(
+              color:
+                  isSelected
+                      ? Colors.deepPurple.withOpacity(0.1)
+                      : Colors.transparent,
+              borderRadius: BorderRadius.circular(16),
+              border:
+                  isSelected
+                      ? Border.all(
+                        color: Colors.deepPurple.withOpacity(0.5),
+                        width: 1,
+                      )
+                      : null,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected ? Colors.deepPurple : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: isSelected ? Colors.white : Colors.grey.shade700,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.w500,
+                      color:
+                          isSelected ? Colors.deepPurple : Colors.grey.shade800,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (badge != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        badge,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  if (isSelected)
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Colors.deepPurple,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _errorRetry(Object e) {
     return Center(
       child: Padding(
@@ -463,12 +714,23 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 80),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.error_outline,
+                size: 80,
+                color: Colors.red.shade300,
+              ),
+            ),
             const SizedBox(height: 24),
             Text(
               'Something went wrong',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
                 color: Colors.grey.shade800,
               ),
@@ -494,6 +756,7 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                elevation: 2,
               ),
             ),
           ],

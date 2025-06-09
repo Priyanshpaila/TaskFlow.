@@ -20,6 +20,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
   final emailController = TextEditingController();
   final passController = TextEditingController();
   final confirmPassController = TextEditingController();
+  final divisionController = TextEditingController();
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreedToTerms = false;
@@ -45,6 +47,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
     emailController.dispose();
     passController.dispose();
     confirmPassController.dispose();
+    divisionController.dispose();
     _animationController.dispose();
     super.dispose();
   }
@@ -90,6 +93,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
     return null;
   }
 
+  String? _validateDivision(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Division is required';
+    }
+    return null;
+  }
+
   void _submit() async {
     // Close keyboard
     FocusScope.of(context).unfocus();
@@ -124,6 +134,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
             emailController.text.trim(),
             passController.text.trim(),
             confirmPassController.text.trim(),
+            divisionController.text.trim(),
           );
 
       final user = ref.read(authStateProvider).value;
@@ -384,6 +395,24 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                         ),
                         const SizedBox(height: 20),
 
+                        // Division Field
+                        _buildInputLabel("Division"),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: divisionController,
+                          textInputAction: TextInputAction.next,
+                          validator: _validateDivision,
+                          inputFormatters: [
+                            UpperCaseTextFormatter(), // 👈 Add this custom formatter
+                          ],
+                          decoration: _inputDecoration(
+                            hintText: "Enter your division",
+                            prefixIcon: Icons.apartment_outlined,
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
                         // Password Field
                         _buildInputLabel("Password"),
                         const SizedBox(height: 8),
@@ -621,6 +650,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
       ),
+    );
+  }
+}
+
+class UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return TextEditingValue(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
     );
   }
 }
