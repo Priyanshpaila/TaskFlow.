@@ -495,50 +495,6 @@ class _AdminDrawerState extends ConsumerState<AdminDrawer>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Help section - Compact
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.help_outline,
-                    color: Colors.blue,
-                    size: 14,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    "Need Help?",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      color: Colors.blue,
-                    ),
-                  ),
-                ),
-                const Icon(
-                  Icons.arrow_forward_ios,
-                  size: 10,
-                  color: Colors.blue,
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
           // Version info
           Text(
             "Admin Panel v2.0.1",

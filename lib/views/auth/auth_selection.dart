@@ -104,8 +104,8 @@ class _AuthSelectionPageState extends State<AuthSelectionPage>
                 ],
               ),
               child: SizedBox(
-                width: 450,
-                height: 400,
+                width: 500,
+                height: 450,
                 child: Padding(
                   padding: const EdgeInsets.all(32),
                   child: Column(
@@ -113,16 +113,36 @@ class _AuthSelectionPageState extends State<AuthSelectionPage>
                     children: [
                       // Logo section
                       Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.05),
-                          shape: BoxShape.circle,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
                         ),
-                        child: Image.asset(
-                          'assets/images/logotext.png',
-                          height: 60,
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(
+                            16,
+                          ), // Rounded corners for a softer look
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Image.asset(
+                              'assets/images/logotext.png',
+                              height: 48,
+                              fit: BoxFit.contain,
+                            ),
+                          ],
                         ),
                       ),
+
                       const SizedBox(height: 32),
 
                       // Welcome text
@@ -142,17 +162,17 @@ class _AuthSelectionPageState extends State<AuthSelectionPage>
                           color: Colors.grey.shade600,
                         ),
                       ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 10),
 
                       // Buttons
                       _buildLoginButton(),
                       const SizedBox(height: 16),
                       _buildSignupButton(),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 16),
 
                       // Copyright
                       Text(
-                        "© 2024 TaskFlow. All rights reserved.",
+                        "© ${DateTime.now().year} TaskFlow. All rights reserved.",
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade500,

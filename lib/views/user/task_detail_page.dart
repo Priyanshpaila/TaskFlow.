@@ -520,6 +520,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     required ValueChanged<String?> onChanged,
     String Function(String)? formatLabel,
   }) {
+    // Status hierarchy for ordering
+    final statusOrder = ['pending', 'in_progress', 'completed'];
+    final currentIndex = statusOrder.indexOf(value);
+
     return Chip(
       avatar: Icon(icon, size: 18, color: color),
       label: DropdownButtonHideUnderline(
@@ -535,15 +539,24 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
           icon: Icon(Icons.arrow_drop_down, color: color),
           isDense: true,
           items:
-              options
-                  .map(
-                    (s) => DropdownMenuItem<String>(
-                      value: s,
-                      child: Text(formatLabel != null ? formatLabel(s) : s),
-                    ),
-                  )
-                  .toList(),
-          onChanged: onChanged,
+              options.map((s) {
+                final optionIndex = statusOrder.indexOf(s);
+                final isDisabled = optionIndex < currentIndex;
+
+                return DropdownMenuItem<String>(
+                  value: isDisabled ? null : s,
+                  enabled: !isDisabled,
+                  child: Text(
+                    formatLabel != null ? formatLabel(s) : s,
+                    style: TextStyle(color: isDisabled ? Colors.grey : color),
+                  ),
+                );
+              }).toList(),
+          onChanged: (selected) {
+            if (selected != null) {
+              onChanged(selected);
+            }
+          },
         ),
       ),
       backgroundColor: color.withOpacity(0.1),
