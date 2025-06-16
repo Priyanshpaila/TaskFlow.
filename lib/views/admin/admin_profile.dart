@@ -350,6 +350,7 @@ class _AdminProfileScreenState extends ConsumerState<AdminProfileScreen>
               controller: usernameController,
               label: 'Username',
               icon: Icons.person_outline,
+              readOnly: true,
               validator:
                   (val) =>
                       val == null || val.isEmpty
@@ -362,6 +363,7 @@ class _AdminProfileScreenState extends ConsumerState<AdminProfileScreen>
               label: 'Email',
               icon: Icons.email_outlined,
               keyboardType: TextInputType.emailAddress,
+              readOnly: true,
               validator:
                   (val) =>
                       val != null && val.contains("@")
@@ -1016,12 +1018,14 @@ class _AdminProfileScreenState extends ConsumerState<AdminProfileScreen>
     Widget? suffixIcon,
     String? Function(String?)? validator,
     TextInputType? keyboardType,
+    bool readOnly = false,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,
+      readOnly: readOnly,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: Colors.deepPurple),

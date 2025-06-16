@@ -106,6 +106,7 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        centerTitle: true,
 
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),

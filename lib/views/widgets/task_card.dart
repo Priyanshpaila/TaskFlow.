@@ -218,7 +218,7 @@ class TaskCard extends StatelessWidget {
                     top: 12,
                     right: 12,
                     child: Container(
-                      padding: const EdgeInsets.all(6),
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color: Colors.deepPurple.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
@@ -228,14 +228,14 @@ class TaskCard extends StatelessWidget {
                         children: [
                           const Icon(
                             Icons.person,
-                            size: 14,
+                            size: 12,
                             color: Colors.deepPurple,
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 2),
                           Text(
                             "${task.assignedTo.length}",
                             style: const TextStyle(
-                              fontSize: 12,
+                              fontSize: 10,
                               fontWeight: FontWeight.bold,
                               color: Colors.deepPurple,
                             ),

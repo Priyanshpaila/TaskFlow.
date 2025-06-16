@@ -211,6 +211,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                       val == null || val.isEmpty
                           ? "Username is required"
                           : null,
+              readOnly: true,
             ),
             const SizedBox(height: 16),
             _buildTextField(
@@ -223,6 +224,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                       val != null && val.contains("@")
                           ? null
                           : "Enter a valid email",
+              readOnly: true,
             ),
             const SizedBox(height: 32),
             _buildSectionTitle('Change Password'),
@@ -330,6 +332,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
     Widget? suffixIcon,
     String? Function(String?)? validator,
     TextInputType? keyboardType,
+    bool readOnly = false,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -338,6 +341,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
       obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,
+      readOnly: readOnly,
       style: TextStyle(color: colorScheme.onSurface),
       decoration: InputDecoration(
         labelText: label,
