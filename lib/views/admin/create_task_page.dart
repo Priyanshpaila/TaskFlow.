@@ -5,9 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../models/task_model.dart';
 
 class CreateTaskPage extends ConsumerStatefulWidget {
-  const CreateTaskPage({super.key});
+  final Task? editTask;
+
+  const CreateTaskPage({super.key, this.editTask});
 
   @override
   ConsumerState<CreateTaskPage> createState() => _CreateTaskPageState();
@@ -22,6 +25,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage>
   String selectedPriority = 'medium';
   DateTime? dueDate;
   TimeOfDay? dueTime;
+  bool isEditing = false;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -75,6 +79,19 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage>
     );
 
     _animationController.forward();
+
+    if (widget.editTask != null) {
+      final task = widget.editTask!;
+      titleController.text = task.title;
+      descriptionController.text = task.description ?? '';
+      selectedPriority = task.priority;
+      dueDate = task.dueDate;
+      if (dueDate != null) {
+        dueTime = TimeOfDay.fromDateTime(dueDate!);
+      }
+      selectedUsers.addAll(task.assignedTo);
+      isEditing = true;
+    }
   }
 
   @override
@@ -156,24 +173,38 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage>
 
     try {
       final taskService = ref.read(taskServiceProvider);
-      await taskService.createTask(
-        title: titleController.text.trim(),
-        description: descriptionController.text.trim(),
-        assignedTo: selectedUsers.toList(),
-        priority: selectedPriority,
-        dueDate: dueDate!,
-      );
+
+      if (isEditing && widget.editTask != null) {
+        await taskService.editTask(
+          taskId: widget.editTask!.id,
+          title: titleController.text.trim(),
+          description: descriptionController.text.trim(),
+          assignedTo: selectedUsers.toList(),
+          priority: selectedPriority,
+          dueDate: dueDate!,
+        );
+      } else {
+        await taskService.createTask(
+          title: titleController.text.trim(),
+          description: descriptionController.text.trim(),
+          assignedTo: selectedUsers.toList(),
+          priority: selectedPriority,
+          dueDate: dueDate!,
+        );
+      }
 
       ref.invalidate(taskServiceProvider);
 
       if (mounted) {
-        Navigator.pop(context); // Close loading
+        Navigator.pop(context);
         _showSuccessDialog();
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // Close loading
-        _showErrorSnackBar('Failed to create task: $e');
+        Navigator.pop(context);
+        _showErrorSnackBar(
+          isEditing ? 'Failed to update task: $e' : 'Failed to create task: $e',
+        );
       }
     }
   }
@@ -200,7 +231,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Creating task...',
+                    isEditing ? 'Updating task...' : 'Creating task...',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
@@ -238,14 +269,19 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage>
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Task Created Successfully!',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Text(
+                  isEditing
+                      ? 'Task Updated Successfully!'
+                      : 'Task Created Successfully!',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Your task has been assigned to ${selectedUsers.length} team member${selectedUsers.length > 1 ? 's' : ''}.',
+                  'The task has been ${isEditing ? 'updated' : 'assigned to ${selectedUsers.length} team member${selectedUsers.length > 1 ? 's' : ''}'}',
                   style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                   textAlign: TextAlign.center,
                 ),
@@ -255,21 +291,22 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage>
               TextButton(
                 onPressed: () {
                   Navigator.pop(context); // Close dialog
-                  Navigator.pop(context); // Go back to previous screen
+                  Navigator.pop(context); // Return
                 },
                 child: const Text('Done'),
               ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  _resetForm();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  foregroundColor: Colors.white,
+              if (!isEditing)
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _resetForm();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Create Another'),
                 ),
-                child: const Text('Create Another'),
-              ),
             ],
           ),
     );
@@ -648,10 +685,11 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage>
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text(
-          'Create New Task',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        title: Text(
+          isEditing ? 'Edit Task' : 'Create New Task',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
+
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -740,9 +778,9 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage>
             borderRadius: BorderRadius.circular(16),
           ),
           icon: const Icon(Icons.add_task),
-          label: const Text(
-            'Create Task',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          label: Text(
+            isEditing ? 'Update Task' : 'Create Task',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
       ),

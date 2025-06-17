@@ -56,7 +56,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
   Widget build(BuildContext context) {
     final taskAsync = ref.watch(taskListProvider);
     final usersAsync = ref.watch(userListProvider);
-  
+
     final now = DateTime.now();
     final greeting = _getGreeting();
     final date = DateFormat('EEEE, MMMM d').format(now);
@@ -73,7 +73,6 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 20),
         ),
         centerTitle: true,
-
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(height: 1, color: Colors.grey.withOpacity(0.2)),
@@ -305,7 +304,6 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
     int count,
     Color color,
     IconData icon,
-
     int percentage,
   ) {
     return LayoutBuilder(
@@ -370,14 +368,6 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                   fontWeight: FontWeight.w600,
                 ),
               ),
-
-              // // Description
-              // Text(
-              //   description,
-              //   style: GoogleFonts.poppins(fontSize: 10, color: Colors.black54),
-              //   maxLines: 2,
-              //   overflow: TextOverflow.ellipsis,
-              // ),
             ],
           ),
         );
@@ -647,6 +637,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
     );
   }
 
+  // ✅ ENHANCED: Added edit functionality to activity items
   Widget _buildActivityItem(dynamic task) {
     // Get status color and icon
     Color statusColor;
@@ -669,68 +660,105 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
         statusIcon = Icons.help_outline_rounded;
     }
 
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => TaskDetailPage(task: task)),
-        );
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => TaskDetailPage(task: task)),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(statusIcon, color: statusColor, size: 20),
               ),
-              child: Icon(statusIcon, color: statusColor, size: 20),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    task.title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      task.title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _formatTimeAgo(task.createdAt),
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.black54,
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatTimeAgo(task.createdAt),
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.black54,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _getPriorityColor(task.priority).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                task.priority.toUpperCase(),
-                style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  color: _getPriorityColor(task.priority),
+                  ],
                 ),
               ),
-            ),
-          ],
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getPriorityColor(task.priority).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  task.priority.toUpperCase(),
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: _getPriorityColor(task.priority),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // ✅ ADDED: Edit button for activity items
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6C63FF).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CreateTaskPage(editTask: task),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: const Padding(
+                      padding: EdgeInsets.all(6),
+                      child: Icon(
+                        Icons.edit_outlined,
+                        size: 16,
+                        color: Color(0xFF6C63FF),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -832,6 +860,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
     );
   }
 
+  // ✅ ENHANCED: Added edit functionality to task items
   Widget _buildEnhancedTaskItem(
     BuildContext context,
     dynamic task, {
@@ -900,7 +929,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
           ),
           child: Column(
             children: [
-              // Task header with status and priority
+              // Task header with status, priority, and edit button
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -941,6 +970,36 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
                           color: priorityColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // ✅ ADDED: Edit button in task header
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6C63FF).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => CreateTaskPage(editTask: task),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: const Padding(
+                            padding: EdgeInsets.all(6),
+                            child: Icon(
+                              Icons.edit_outlined,
+                              size: 16,
+                              color: Color(0xFF6C63FF),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -1123,8 +1182,6 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                 itemCount: users.length,
                 itemBuilder: (context, index) {
                   final user = users[index];
-                  // Mock performance data
-
                   return _buildTeamMemberCard(
                     user.username,
                     user.email,
@@ -1298,9 +1355,6 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
       ),
     );
   }
-
-
-
 
   String _getGreeting() {
     final hour = DateTime.now().hour;

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:task_flow_app/services/user_service.dart';
 import '../../providers/task_provider.dart';
 import '../../state/auth_state.dart';
 import '../widgets/task_card.dart';
@@ -20,12 +21,47 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
   late TabController _tabController;
   int _selectedDrawerIndex = 0;
 
+  String _selectedStatus = 'active'; // default or load from user model
+
+  // Enhanced status options with better data structure
+  final List<Map<String, dynamic>> _statusOptions = [
+    {
+      'value': 'active',
+      'label': 'Active',
+      'color': Colors.green,
+      'icon': Icons.check_circle,
+      'description': 'Available and ready to work',
+    },
+    {
+      'value': 'inactive',
+      'label': 'Inactive',
+      'color': Colors.grey,
+      'icon': Icons.radio_button_unchecked,
+      'description': 'Not currently active',
+    },
+    {
+      'value': 'dnd',
+      'label': 'Do Not Disturb',
+      'color': Colors.red,
+      'icon': Icons.do_not_disturb,
+      'description': 'Focused work mode',
+    },
+    {
+      'value': 'away',
+      'label': 'Away',
+      'color': Colors.orange,
+      'icon': Icons.schedule,
+      'description': 'Temporarily unavailable',
+    },
+  ];
+
   final List<String> filters = [
     'All',
     'In Progress',
     'Pending',
     'High Priority',
     'History',
+    'My Created',
   ];
 
   final Map<String, IconData> filterIcons = {
@@ -34,6 +70,7 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
     'Pending': Icons.hourglass_empty,
     'High Priority': Icons.priority_high,
     'History': Icons.history,
+    'My Created': Icons.person,
   };
 
   @override
@@ -48,6 +85,330 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
     super.dispose();
   }
 
+  // Helper method to get current status data
+  Map<String, dynamic> get _currentStatusData {
+    return _statusOptions.firstWhere(
+      (status) => status['value'] == _selectedStatus,
+      orElse: () => _statusOptions[0],
+    );
+  }
+
+  // Enhanced status dropdown widget
+  Widget _buildStatusDropdown() {
+    return Container(
+      margin: const EdgeInsets.only(right: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: PopupMenuButton<String>(
+        offset: const Offset(0, 50),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 8,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Status indicator dot
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: _currentStatusData['color'],
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: (_currentStatusData['color'] as Color).withOpacity(
+                        0.5,
+                      ),
+                      blurRadius: 4,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Status icon
+              Icon(
+                _currentStatusData['icon'],
+                size: 16,
+                color: _currentStatusData['color'],
+              ),
+              const SizedBox(width: 4),
+              // Dropdown arrow
+              Icon(
+                Icons.keyboard_arrow_down,
+                size: 16,
+                color: Colors.grey.shade600,
+              ),
+            ],
+          ),
+        ),
+        itemBuilder:
+            (context) =>
+                _statusOptions.map((status) {
+                  final isSelected = status['value'] == _selectedStatus;
+                  return PopupMenuItem<String>(
+                    value: status['value'],
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        children: [
+                          // Status indicator
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: (status['color'] as Color).withOpacity(
+                                    0.1,
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              Icon(
+                                status['icon'],
+                                size: 18,
+                                color: status['color'],
+                              ),
+                              if (isSelected)
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    width: 12,
+                                    height: 12,
+                                    decoration: BoxDecoration(
+                                      color: Colors.deepPurple,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.check,
+                                      size: 6,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(width: 12),
+                          // Status info
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  status['label'],
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight:
+                                        isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.w500,
+                                    color:
+                                        isSelected
+                                            ? Colors.deepPurple
+                                            : Colors.black87,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  status['description'],
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Selection indicator
+                          if (isSelected)
+                            Container(
+                              width: 4,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: Colors.deepPurple,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+        onSelected: (newStatus) async {
+          if (newStatus != _selectedStatus) {
+            // Show loading state
+            setState(() {
+              _selectedStatus = newStatus;
+            });
+
+            try {
+              await UserService().updateUserStatus(newStatus);
+
+              // Show success with enhanced snackbar
+              if (mounted) {
+                final statusData = _statusOptions.firstWhere(
+                  (s) => s['value'] == newStatus,
+                );
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        Icon(statusData['icon'], color: Colors.white, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Status Updated',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                'You are now ${statusData['label']}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white.withOpacity(0.9),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    backgroundColor: statusData['color'],
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    margin: const EdgeInsets.all(16),
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
+            } catch (e) {
+              // Revert status on error
+              setState(() {
+                _selectedStatus = _statusOptions[0]['value']; // Reset to active
+              });
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.white),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Update Failed',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              Text(
+                                'Could not update status: ${e.toString()}',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    margin: const EdgeInsets.all(16),
+                    duration: const Duration(seconds: 4),
+                    action: SnackBarAction(
+                      label: 'Retry',
+                      textColor: Colors.white,
+                      onPressed: () => _updateStatus(newStatus),
+                    ),
+                  ),
+                );
+              }
+            }
+          }
+        },
+      ),
+    );
+  }
+
+  // Helper method for status update with retry capability
+  Future<void> _updateStatus(String newStatus) async {
+    setState(() {
+      _selectedStatus = newStatus;
+    });
+
+    try {
+      await UserService().updateUserStatus(newStatus);
+
+      if (mounted) {
+        final statusData = _statusOptions.firstWhere(
+          (s) => s['value'] == newStatus,
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(statusData['icon'], color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Text('Status updated to ${statusData['label']}'),
+              ],
+            ),
+            backgroundColor: statusData['color'],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update status: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    }
+  }
+
   List _applyFilter(List tasks, String filter) {
     if (filter == 'All') {
       return tasks.where((t) => t.status != 'completed').toList();
@@ -59,6 +420,10 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
       return tasks
           .where((t) => t.priority == 'urgent' || t.priority == 'high')
           .toList();
+    }
+    if (filter == 'My Created') {
+      final user = ref.read(authStateProvider).value;
+      return tasks.where((t) => t.createdBy == user?.id).toList();
     }
     return tasks
         .where((t) => t.status == filter.toLowerCase().replaceAll(' ', '_'))
@@ -88,6 +453,17 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
     final formatter = DateFormat('EEEE, MMMM d');
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.pushNamed(context, '/create-personal-task');
+        },
+        icon: const Icon(Icons.add_task, color: Colors.white),
+        label: const Text(
+          'New Personal Task',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.deepPurple,
+      ),
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: Column(
@@ -107,7 +483,8 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
         foregroundColor: Colors.black,
         elevation: 0,
         centerTitle: true,
-
+        // ✅ Enhanced status dropdown
+        actions: [_buildStatusDropdown()],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Container(
@@ -184,7 +561,12 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
     );
   }
 
+  // ✅ FIXED: Updated _buildTaskList method
   Widget _buildTaskList(List filtered, String filter) {
+    final user = ref.read(authStateProvider).value!;
+    final String currentUserId = user.id;
+    final bool isAdmin = user.role == 'admin';
+
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
@@ -263,7 +645,11 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
               final task = filtered[index];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
-                child: InkWell(
+                child: TaskCard(
+                  task: task,
+                  currentUserId: currentUserId,
+                  isAdmin: isAdmin,
+                  // ✅ FIXED: Pass onTap callback directly to TaskCard
                   onTap:
                       () => Navigator.push(
                         context,
@@ -271,8 +657,6 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
                           builder: (_) => TaskDetailPage(task: task),
                         ),
                       ),
-                  borderRadius: BorderRadius.circular(16),
-                  child: TaskCard(task: task),
                 ),
               );
             }, childCount: filtered.length),
@@ -391,7 +775,7 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
                         width: 20,
                         height: 20,
                         decoration: BoxDecoration(
-                          color: Colors.green,
+                          color: _currentStatusData['color'],
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
                           boxShadow: [
@@ -445,14 +829,11 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
             ),
           ),
           const SizedBox(height: 16),
-
-          // Beautiful Drawer Tiles
           _buildDrawerTile(
             icon: Icons.dashboard_rounded,
             title: "Dashboard",
             index: 0,
           ),
-
           _buildDrawerTile(
             icon: Icons.person_outline,
             title: "My Profile",
@@ -462,87 +843,11 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
               Navigator.pushNamed(context, '/profile');
             },
           ),
-
-          // _buildDrawerTile(
-          //   icon: Icons.calendar_today_outlined,
-          //   title: "Calendar",
-          //   index: 2,
-          //   badge: "3",
-          // ),
-
-          // _buildDrawerTile(
-          //   icon: Icons.analytics_outlined,
-          //   title: "Analytics",
-          //   index: 3,
-          // ),
-
-          // _buildDrawerTile(
-          //   icon: Icons.settings_outlined,
-          //   title: "Settings",
-          //   index: 4,
-          // ),
-
-          // Padding(
-          //   padding: const EdgeInsets.symmetric(horizontal: 16),
-          //   child: Container(
-          //     padding: const EdgeInsets.all(16),
-          //     decoration: BoxDecoration(
-          //       color: Colors.deepPurple.shade50,
-          //       borderRadius: BorderRadius.circular(16),
-          //     ),
-          //     child: Row(
-          //       children: [
-          //         Container(
-          //           padding: const EdgeInsets.all(10),
-          //           decoration: BoxDecoration(
-          //             color: Colors.deepPurple.shade100,
-          //             borderRadius: BorderRadius.circular(12),
-          //           ),
-          //           child: const Icon(
-          //             Icons.headset_mic_outlined,
-          //             color: Colors.deepPurple,
-          //             size: 24,
-          //           ),
-          //         ),
-          //         const SizedBox(width: 12),
-          //         Expanded(
-          //           child: Column(
-          //             crossAxisAlignment: CrossAxisAlignment.start,
-          //             children: [
-          //               const Text(
-          //                 "Need Help?",
-          //                 style: TextStyle(
-          //                   fontWeight: FontWeight.bold,
-          //                   fontSize: 16,
-          //                   color: Colors.deepPurple,
-          //                 ),
-          //               ),
-          //               const SizedBox(height: 4),
-          //               Text(
-          //                 "Contact our support team",
-          //                 style: TextStyle(
-          //                   fontSize: 12,
-          //                   color: Colors.grey.shade700,
-          //                 ),
-          //               ),
-          //             ],
-          //           ),
-          //         ),
-          //         const Icon(
-          //           Icons.arrow_forward_ios,
-          //           size: 14,
-          //           color: Colors.deepPurple,
-          //         ),
-          //       ],
-          //     ),
-          //   ),
-          // ),
           const Spacer(),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Divider(height: 32),
           ),
-
           Padding(
             padding: const EdgeInsets.all(16),
             child: Container(

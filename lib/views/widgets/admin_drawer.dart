@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:task_flow_app/views/admin/admin_profile.dart';
+import 'package:task_flow_app/views/allUsers/self_task_create.dart';
 import '../../state/auth_state.dart';
 import '../admin/admin_dashboard.dart';
 import '../admin/create_task_page.dart';
@@ -342,6 +343,21 @@ class _AdminDrawerState extends ConsumerState<AdminDrawer>
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const CreateTaskPage()),
+              );
+            },
+          ),
+          _buildMenuItem(
+            context: context,
+            icon: Icons.person_add_alt_1_rounded,
+            title: 'Create Personal Task',
+            isActive: false,
+            color: Colors.indigo,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const CreatePersonalTaskPage(),
+                ),
               );
             },
           ),

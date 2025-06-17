@@ -1,289 +1,426 @@
-// ignore_for_file: unnecessary_null_comparison, deprecated_member_use
+// ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:task_flow_app/views/admin/create_task_page.dart';
+import 'package:task_flow_app/views/allUsers/self_task_create.dart';
 import '../../models/task_model.dart';
 
-class TaskCard extends StatelessWidget {
+// Enhanced chip types
+enum ChipType { priority, status, date, assignee }
+
+class TaskCard extends StatefulWidget {
   final Task task;
   final bool showBadgesInside;
+  final String currentUserId;
+  final bool isAdmin;
+  final VoidCallback? onTap; // Add onTap callback
 
-  const TaskCard({super.key, required this.task, this.showBadgesInside = true});
+  const TaskCard({
+    super.key,
+    required this.task,
+    this.showBadgesInside = true,
+    required this.currentUserId,
+    required this.isAdmin,
+    this.onTap, // Add onTap parameter
+  });
+
+  @override
+  State<TaskCard> createState() => _TaskCardState();
+}
+
+class _TaskCardState extends State<TaskCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails details) {
+    setState(() => _isPressed = true);
+    _animationController.forward();
+  }
+
+  void _onTapUp(TapUpDetails details) {
+    setState(() => _isPressed = false);
+    _animationController.reverse();
+    // Call the onTap callback when tap is completed
+    if (widget.onTap != null) {
+      widget.onTap!();
+    }
+  }
+
+  void _onTapCancel() {
+    setState(() => _isPressed = false);
+    _animationController.reverse();
+  }
 
   @override
   Widget build(BuildContext context) {
     final formattedDate =
-        task.dueDate != null
-            ? DateFormat('MMM d, yyyy').format(task.dueDate!)
+        widget.task.dueDate != null
+            ? DateFormat('MMM d, yyyy').format(widget.task.dueDate!)
             : null;
 
     final bool isOverdue =
-        task.dueDate != null &&
-        task.dueDate!.isBefore(DateTime.now()) &&
-        task.status != 'completed';
+        widget.task.dueDate != null &&
+        widget.task.dueDate!.isBefore(DateTime.now()) &&
+        widget.task.status != 'completed';
 
-    final bool isCompleted = task.status == 'completed';
+    final bool isCompleted = widget.task.status == 'completed';
     final bool isHighPriority =
-        task.priority == 'high' || task.priority == 'urgent';
+        widget.task.priority == 'high' || widget.task.priority == 'urgent';
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Container(
-          constraints: const BoxConstraints(minHeight: 120),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-            border: Border.all(
-              color:
-                  isOverdue
-                      ? Colors.red.withOpacity(0.3)
-                      : isHighPriority && !isCompleted
-                      ? _getPriorityColor(task.priority).withOpacity(0.3)
-                      : Colors.transparent,
-              width: isOverdue || (isHighPriority && !isCompleted) ? 1.5 : 0,
-            ),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Stack(
-              children: [
-                // Status indicator bar
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 6,
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: GestureDetector(
+            onTapDown: _onTapDown,
+            onTapUp: _onTapUp,
+            onTapCancel: _onTapCancel,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 2),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
                     color:
-                        isOverdue ? Colors.red : _getStatusColor(task.status),
+                        _isPressed
+                            ? Colors.black.withOpacity(0.15)
+                            : Colors.black.withOpacity(0.08),
+                    blurRadius: _isPressed ? 12 : 8,
+                    offset: Offset(0, _isPressed ? 6 : 3),
+                    spreadRadius: _isPressed ? 1 : 0,
                   ),
+                ],
+                border: Border.all(
+                  color:
+                      isOverdue
+                          ? Colors.red.withOpacity(0.3)
+                          : isHighPriority && !isCompleted
+                          ? _getPriorityColor(
+                            widget.task.priority,
+                          ).withOpacity(0.2)
+                          : Colors.grey.withOpacity(0.1),
+                  width: isOverdue ? 2 : 1,
                 ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Stack(
+                  children: [
+                    // Gradient background for high priority tasks
+                    if (isHighPriority && !isCompleted)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                _getPriorityColor(
+                                  widget.task.priority,
+                                ).withOpacity(0.03),
+                                Colors.transparent,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                        ),
+                      ),
 
-                // Main content
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Left padding to account for status bar
-                      const SizedBox(width: 6),
+                    // Status indicator bar
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 5,
+                        decoration: BoxDecoration(
+                          color:
+                              isOverdue
+                                  ? Colors.red
+                                  : _getStatusColor(widget.task.status),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                            bottomLeft: Radius.circular(20),
+                          ),
+                        ),
+                      ),
+                    ),
 
-                      // Content column
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Title row with completion status
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Task completion indicator
-                                Container(
-                                  margin: const EdgeInsets.only(
-                                    top: 3,
-                                    right: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border:
-                                        isCompleted
-                                            ? null
-                                            : Border.all(
-                                              color: _getStatusColor(
-                                                task.status,
-                                              ),
-                                              width: 2,
-                                            ),
-                                    color:
-                                        isCompleted
-                                            ? _getStatusColor(task.status)
-                                            : Colors.transparent,
-                                  ),
-                                  width: 18,
-                                  height: 18,
-                                  child:
+                    // Main content
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header row with title and actions
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Status checkbox
+                              Container(
+                                margin: const EdgeInsets.only(
+                                  top: 2,
+                                  right: 12,
+                                ),
+                                width: 22,
+                                height: 22,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color:
                                       isCompleted
-                                          ? const Icon(
-                                            Icons.check,
-                                            size: 12,
-                                            color: Colors.white,
-                                          )
+                                          ? _getStatusColor(widget.task.status)
+                                          : Colors.transparent,
+                                  border:
+                                      isCompleted
+                                          ? null
+                                          : Border.all(
+                                            color: _getStatusColor(
+                                              widget.task.status,
+                                            ),
+                                            width: 2.5,
+                                          ),
+                                  boxShadow:
+                                      isCompleted
+                                          ? [
+                                            BoxShadow(
+                                              color: _getStatusColor(
+                                                widget.task.status,
+                                              ).withOpacity(0.3),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ]
                                           : null,
                                 ),
-
-                                // Title
-                                Expanded(
-                                  child: Text(
-                                    task.title,
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.bold,
-                                      decoration:
-                                          isCompleted
-                                              ? TextDecoration.lineThrough
-                                              : TextDecoration.none,
-                                      color:
-                                          isCompleted
-                                              ? Colors.grey.shade600
-                                              : Colors.black87,
-                                      height: 1.3,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            // Description if available
-                            if (task.description != null &&
-                                task.description!.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  left: 28,
-                                  top: 6,
-                                  bottom: 8,
-                                ),
-                                child: Text(
-                                  task.description!,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey.shade700,
-                                    height: 1.4,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                child:
+                                    isCompleted
+                                        ? const Icon(
+                                          Icons.check,
+                                          size: 14,
+                                          color: Colors.white,
+                                        )
+                                        : null,
                               ),
 
-                            const SizedBox(height: 12),
-
-                            // Metadata chips
-                            if (showBadgesInside)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 28),
-                                child: Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
+                              // Title
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // Priority chip
-                                    _buildEnhancedChip(
-                                      text: _formatPriority(task.priority),
-                                      icon: _getPriorityIcon(task.priority),
-                                      color: _getPriorityColor(task.priority),
-                                    ),
-
-                                    // Status chip
-                                    _buildEnhancedChip(
-                                      text: _formatStatus(task.status),
-                                      icon: _getStatusIcon(task.status),
-                                      color: _getStatusColor(task.status),
-                                    ),
-
-                                    // Due date chip
-                                    if (formattedDate != null)
-                                      _buildEnhancedChip(
-                                        text: formattedDate,
-                                        icon:
-                                            isOverdue
-                                                ? Icons.warning_amber_rounded
-                                                : Icons.event,
+                                    Text(
+                                      widget.task.title,
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                        decoration:
+                                            isCompleted
+                                                ? TextDecoration.lineThrough
+                                                : TextDecoration.none,
+                                        decorationColor: Colors.grey.shade500,
+                                        decorationThickness: 2,
                                         color:
-                                            isOverdue
-                                                ? Colors.red
-                                                : Colors.blue,
-                                        isOverdue: isOverdue,
+                                            isCompleted
+                                                ? Colors.grey.shade500
+                                                : Colors.black87,
+                                        height: 1.2,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+
+                                    // Description
+                                    if (widget.task.description != null &&
+                                        widget.task.description!.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 8),
+                                        child: Text(
+                                          widget.task.description!,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color:
+                                                isCompleted
+                                                    ? Colors.grey.shade400
+                                                    : Colors.grey.shade600,
+                                            height: 1.4,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
                                   ],
                                 ),
                               ),
-                          ],
+
+                              // Edit button - Prevent tap propagation
+                              if (widget.task.createdBy ==
+                                      widget.currentUserId ||
+                                  widget.isAdmin)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.deepPurple.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        // Prevent the card tap from firing
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (_) =>
+                                                    widget.isAdmin
+                                                        ? CreateTaskPage(
+                                                          editTask: widget.task,
+                                                        )
+                                                        : CreatePersonalTaskPage(
+                                                          editTask: widget.task,
+                                                        ),
+                                          ),
+                                        );
+                                      },
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(8),
+                                        child: Icon(
+                                          Icons.edit_outlined,
+                                          size: 18,
+                                          color: Colors.deepPurple,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // Badges and info
+                          if (widget.showBadgesInside)
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _buildModernChip(
+                                  text: _formatPriority(widget.task.priority),
+                                  icon: _getPriorityIcon(widget.task.priority),
+                                  color: _getPriorityColor(
+                                    widget.task.priority,
+                                  ),
+                                  type: ChipType.priority,
+                                ),
+                                _buildModernChip(
+                                  text: _formatStatus(widget.task.status),
+                                  icon: _getStatusIcon(widget.task.status),
+                                  color: _getStatusColor(widget.task.status),
+                                  type: ChipType.status,
+                                ),
+                                if (formattedDate != null)
+                                  _buildModernChip(
+                                    text: formattedDate,
+                                    icon:
+                                        isOverdue
+                                            ? Icons.warning_amber_rounded
+                                            : Icons.schedule_outlined,
+                                    color: isOverdue ? Colors.red : Colors.blue,
+                                    type: ChipType.date,
+                                    isOverdue: isOverdue,
+                                  ),
+                                if (widget.task.assignedTo.isNotEmpty)
+                                  _buildModernChip(
+                                    text:
+                                        "${widget.task.assignedTo.length} assigned",
+                                    icon: Icons.people_outline,
+                                    color: Colors.deepPurple,
+                                    type: ChipType.assignee,
+                                  ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    // Overdue banner
+                    if (isOverdue)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.red.shade600,
+                                Colors.red.shade700,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: const BorderRadius.only(
+                              topRight: Radius.circular(20),
+                              bottomLeft: Radius.circular(16),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.red.withOpacity(0.3),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.warning_amber_rounded,
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                "OVERDUE",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ],
-                  ),
+                  ],
                 ),
-
-                // Assignee indicator (if available)
-                if (task.assignedTo != null && task.assignedTo.isNotEmpty)
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.deepPurple.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.person,
-                            size: 12,
-                            color: Colors.deepPurple,
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            "${task.assignedTo.length}",
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.deepPurple,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                // Overdue indicator
-                if (isOverdue)
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.only(
-                          topRight: Radius.circular(16),
-                          bottomLeft: Radius.circular(12),
-                        ),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.warning_amber_rounded,
-                            size: 12,
-                            color: Colors.white,
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            "OVERDUE",
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
+              ),
             ),
           ),
         );
@@ -291,27 +428,74 @@ class TaskCard extends StatelessWidget {
     );
   }
 
+  Widget _buildModernChip({
+    required String text,
+    required IconData icon,
+    required Color color,
+    required ChipType type,
+    bool isOverdue = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: color.withOpacity(isOverdue ? 0.6 : 0.2),
+          width: isOverdue ? 1.5 : 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 12, color: color),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Enhanced color schemes
   Color _getStatusColor(String status) {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'completed':
-        return Colors.green;
+        return Colors.green.shade600;
       case 'in_progress':
-        return Colors.blue;
+        return Colors.blue.shade600;
       case 'pending':
-        return Colors.orange;
+        return Colors.orange.shade600;
+      case 'cancelled':
+        return Colors.red.shade600;
       default:
-        return Colors.grey;
+        return Colors.grey.shade600;
     }
   }
 
   IconData _getStatusIcon(String status) {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'completed':
         return Icons.check_circle_outline;
       case 'in_progress':
         return Icons.pending_actions;
       case 'pending':
         return Icons.hourglass_empty;
+      case 'cancelled':
+        return Icons.cancel_outlined;
       default:
         return Icons.help_outline;
     }
@@ -322,15 +506,15 @@ class TaskCard extends StatelessWidget {
       case 'urgent':
         return Colors.red.shade700;
       case 'high':
-        return Colors.red;
+        return Colors.red.shade600;
       case 'medium':
-        return Colors.orange;
+        return Colors.orange.shade600;
       case 'low':
-        return Colors.green;
+        return Colors.green.shade600;
       case 'easy':
-        return Colors.blue;
+        return Colors.blue.shade600;
       default:
-        return Colors.grey;
+        return Colors.grey.shade600;
     }
   }
 
@@ -339,15 +523,15 @@ class TaskCard extends StatelessWidget {
       case 'urgent':
         return Icons.priority_high;
       case 'high':
-        return Icons.arrow_upward;
+        return Icons.keyboard_arrow_up;
       case 'medium':
         return Icons.remove;
       case 'low':
-        return Icons.arrow_downward;
+        return Icons.keyboard_arrow_down;
       case 'easy':
-        return Icons.check;
+        return Icons.check_circle_outline;
       default:
-        return Icons.flag;
+        return Icons.flag_outlined;
     }
   }
 
@@ -360,39 +544,5 @@ class TaskCard extends StatelessWidget {
 
   String _formatPriority(String priority) {
     return priority[0].toUpperCase() + priority.substring(1);
-  }
-
-  Widget _buildEnhancedChip({
-    required String text,
-    required IconData icon,
-    required Color color,
-    bool isOverdue = false,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border:
-            isOverdue
-                ? Border.all(color: color.withOpacity(0.5), width: 1)
-                : null,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

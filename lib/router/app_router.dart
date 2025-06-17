@@ -1,6 +1,7 @@
 // router/app_router.dart
 import 'package:flutter/material.dart';
 import 'package:task_flow_app/views/admin/admin_profile.dart';
+import 'package:task_flow_app/views/allUsers/self_task_create.dart';
 import 'package:task_flow_app/views/user/user_profile.dart';
 import '../views/auth/auth_selection.dart';
 import '../views/auth/login_screen.dart';
@@ -18,5 +19,6 @@ final Map<String, WidgetBuilder> appRoutes = {
   '/user': (context) => const UserDashboard(),
   '/profile': (context) => const UserProfileScreen(),
   '/admin/profile': (context) => const AdminProfileScreen(),
+  '/create-personal-task': (context) => const CreatePersonalTaskPage(),
 
 };

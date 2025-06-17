@@ -2,10 +2,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:task_flow_app/state/auth_state.dart';
 import 'package:task_flow_app/views/admin/create_task_page.dart';
+import 'package:task_flow_app/views/user/task_detail_page.dart';
 import '../../models/task_model.dart';
 import '../../providers/task_provider.dart';
 import '../widgets/task_card.dart';
+// Add this import for TaskDetailPage
 
 class AdminTaskListPage extends ConsumerStatefulWidget {
   const AdminTaskListPage({super.key});
@@ -18,12 +21,19 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  final List<String> tabLabels = ["All", "To Do", "In Review", "Completed"];
+  final List<String> tabLabels = [
+    "All",
+    "To Do",
+    "In Review",
+    "Completed",
+    "Personal",
+  ];
   final List<String> statusFilter = [
     "all",
     "pending",
     "in_progress",
     "completed",
+    "personal",
   ];
 
   final Map<String, IconData> tabIcons = {
@@ -31,6 +41,7 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
     "To Do": Icons.pending_actions,
     "In Review": Icons.rate_review,
     "Completed": Icons.task_alt,
+    "Personal": Icons.person_pin,
   };
 
   final Map<String, Color> tabColors = {
@@ -38,8 +49,8 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
     "To Do": Colors.orange,
     "In Review": Colors.blue,
     "Completed": Colors.green,
+    "Personal": Colors.teal,
   };
-
   @override
   void initState() {
     super.initState();
@@ -54,7 +65,9 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
 
   List<Task> _filterTasks(List<Task> tasks, String status) {
     if (status == "all") return tasks;
-    return tasks.where((t) => t.status == status).toList();
+    if (status == "personal")
+      return tasks.where((t) => t.isPersonalTask).toList();
+    return tasks.where((t) => t.status == status && !t.isPersonalTask).toList();
   }
 
   @override
@@ -84,20 +97,23 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
-        // actions: [
-        //   IconButton(
-        //     icon: const Icon(Icons.search),
-        //     onPressed: () {
-        //       // Search functionality placeholder
-        //     },
-        //   ),
-        //   IconButton(
-        //     icon: const Icon(Icons.filter_list),
-        //     onPressed: () {
-        //       // Filter functionality placeholder
-        //     },
-        //   ),
-        // ],
+        actions: [
+          // Add floating action button for creating new tasks
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: FloatingActionButton(
+              mini: true,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CreateTaskPage()),
+                );
+              },
+              backgroundColor: Colors.deepPurple,
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Container(
@@ -117,8 +133,14 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
                   tabLabels
                       .map(
                         (label) => Tab(
-                          text: label,
-                          icon: Icon(tabIcons[label], size: 20),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(tabIcons[label], size: 18),
+                              const SizedBox(width: 8),
+                              Text(label),
+                            ],
+                          ),
                         ),
                       )
                       .toList(),
@@ -175,41 +197,72 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
+        // Enhanced header with gradient background
         SliverPadding(
           padding: const EdgeInsets.all(16),
           sliver: SliverToBoxAdapter(
-            child: Row(
-              children: [
-                Icon(tabIcons[category], color: tabColors[category], size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  "$category Tasks",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: tabColors[category],
-                  ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    tabColors[category]!.withOpacity(0.7),
+                    tabColors[category]!,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: tabColors[category]!.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
-                  decoration: BoxDecoration(
-                    color: tabColors[category]!.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Icon(tabIcons[category], color: Colors.white, size: 24),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "$category Tasks",
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        "${tasks.length} ${tasks.length == 1 ? 'task' : 'tasks'} to manage",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                    ],
                   ),
-                  child: Text(
-                    "${tasks.length} ${tasks.length == 1 ? 'task' : 'tasks'}",
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: tabColors[category],
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      "${tasks.length}",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -228,21 +281,22 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
     );
   }
 
+  // ✅ FIXED: Added onTap callback to TaskCard
   Widget _buildEnhancedTaskCard(Task task) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [Colors.white, Colors.grey.shade50],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    final user = ref.read(authStateProvider).value!;
+    final String currentUserId = user.id;
+    final bool isAdmin = user.role == 'admin';
+
+    return TaskCard(
+      task: task,
+      currentUserId: currentUserId,
+      isAdmin: isAdmin,
+      // ✅ FIXED: Added onTap callback for navigation
+      onTap:
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => TaskDetailPage(task: task)),
           ),
-        ),
-        child: TaskCard(task: task),
-      ),
     );
   }
 
@@ -307,6 +361,7 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                    elevation: 2,
                   ),
                 ),
               ],
@@ -366,6 +421,7 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                elevation: 2,
               ),
             ),
           ],

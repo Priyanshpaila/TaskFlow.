@@ -6,7 +6,7 @@ class Task {
   final String priority;
   final String status;
   final DateTime? dueDate;
-  final DateTime? createdAt; // ✅ Added field
+  final DateTime? createdAt;
   final String createdBy;
   final String division;
 
@@ -18,11 +18,12 @@ class Task {
     required this.priority,
     required this.status,
     this.dueDate,
-    this.createdAt, // ✅ Include in constructor
+    this.createdAt,
     required this.createdBy,
     required this.division,
   });
 
+  /// ✅ Factory constructor to build Task from JSON
   factory Task.fromJson(Map<String, dynamic> json) => Task(
     id: json['_id'],
     title: json['title'],
@@ -36,9 +37,7 @@ class Task {
     dueDate:
         json['dueDate'] != null ? DateTime.tryParse(json['dueDate']) : null,
     createdAt:
-        json['createdAt'] != null
-            ? DateTime.tryParse(json['createdAt'])
-            : null, // ✅ Safe parse
+        json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
     createdBy:
         json['createdBy'] is String
             ? json['createdBy']
@@ -46,6 +45,7 @@ class Task {
     division: json['division'] ?? '',
   );
 
+  /// ✅ Convert Task to JSON
   Map<String, dynamic> toJson() => {
     '_id': id,
     'title': title,
@@ -54,8 +54,12 @@ class Task {
     'priority': priority,
     'status': status,
     'dueDate': dueDate?.toIso8601String(),
-    'createdAt': createdAt?.toIso8601String(), // ✅ Include in toJson
+    'createdAt': createdAt?.toIso8601String(),
     'createdBy': createdBy,
     'division': division,
   };
+
+  /// ✅ Helper: Check if task is personal/self-assigned
+  bool get isPersonalTask =>
+      assignedTo.length == 1 && assignedTo.first == createdBy;
 }

@@ -66,4 +66,28 @@ class UserService {
   }
 }
 
+
+Future<void> updateUserStatus(String newStatus) async {
+  final token = await _getToken();
+
+  if (token == null) {
+    throw Exception("Token not found. User might not be logged in.");
+  }
+
+  final response = await http.patch(
+    Uri.parse('$baseUrl/users/status'),
+    headers: {
+      "Authorization": "Bearer $token",
+      "Content-Type": "application/json",
+    },
+    body: jsonEncode({"status": newStatus}),
+  );
+
+  if (response.statusCode != 200) {
+    final msg = jsonDecode(response.body)['message'] ?? 'Status update failed';
+    throw Exception("Error ${response.statusCode}: $msg");
+  }
+}
+
+
 }
