@@ -228,19 +228,20 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
     final pending = tasks.where((t) => t.status == 'pending').length;
     final inProgress = tasks.where((t) => t.status == 'in_progress').length;
     final completed = tasks.where((t) => t.status == 'completed').length;
+    final aborted = tasks.where((t) => t.status == 'aborted').length; // ✅ ADDED
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Summary Cards
-          _buildSummaryCards(total, inProgress, pending, completed),
+          // Summary Cards - Updated to include aborted
+          _buildSummaryCards(total, inProgress, pending, completed, aborted),
 
           const SizedBox(height: 24),
 
-          // Task Progress Chart
-          _buildTaskProgressChart(inProgress, pending, completed),
+          // Task Progress Chart - Updated to include aborted
+          _buildTaskProgressChart(inProgress, pending, completed, aborted),
 
           const SizedBox(height: 24),
 
@@ -253,11 +254,13 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
     );
   }
 
+  // ✅ UPDATED: Added aborted parameter and card
   Widget _buildSummaryCards(
     int total,
     int inProgress,
     int pending,
     int completed,
+    int aborted, // ✅ ADDED
   ) {
     return GridView.count(
       shrinkWrap: true,
@@ -289,11 +292,11 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
           completed > 0 ? (completed / total * 100).toInt() : 0,
         ),
         _buildEnhancedSummaryCard(
-          "Total Tasks",
-          total,
-          const Color(0xFF2196F3),
-          Icons.assignment_rounded,
-          100,
+          "Aborted", // ✅ ADDED
+          aborted,
+          const Color(0xFFF44336), // Red color for aborted
+          Icons.cancel_outlined,
+          aborted > 0 ? (aborted / total * 100).toInt() : 0,
         ),
       ],
     );
@@ -375,8 +378,14 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
     );
   }
 
-  Widget _buildTaskProgressChart(int inProgress, int pending, int completed) {
-    final total = inProgress + pending + completed;
+  // ✅ UPDATED: Added aborted parameter and legend
+  Widget _buildTaskProgressChart(
+    int inProgress,
+    int pending,
+    int completed,
+    int aborted,
+  ) {
+    final total = inProgress + pending + completed + aborted; // ✅ UPDATED
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -439,6 +448,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                                       inProgress: inProgress,
                                       pending: pending,
                                       completed: completed,
+                                      aborted: aborted, // ✅ ADDED
                                       total: total,
                                     ),
                                   ),
@@ -482,17 +492,24 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                                 inProgress,
                                 const Color(0xFF6C63FF),
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 12),
                               _buildChartLegendItem(
                                 "Pending",
                                 pending,
                                 const Color(0xFFFF9800),
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 12),
                               _buildChartLegendItem(
                                 "Completed",
                                 completed,
                                 const Color(0xFF4CAF50),
+                              ),
+                              const SizedBox(height: 12),
+                              // ✅ ADDED: Aborted legend item
+                              _buildChartLegendItem(
+                                "Aborted",
+                                aborted,
+                                const Color(0xFFF44336),
                               ),
                             ],
                           ),
@@ -637,7 +654,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
     );
   }
 
-  // ✅ ENHANCED: Added edit functionality to activity items
+  // ✅ UPDATED: Added aborted status handling
   Widget _buildActivityItem(dynamic task) {
     // Get status color and icon
     Color statusColor;
@@ -654,6 +671,10 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
       case 'completed':
         statusColor = Colors.green;
         statusIcon = Icons.check_circle_rounded;
+        break;
+      case 'aborted': // ✅ ADDED
+        statusColor = const Color(0xFFF44336);
+        statusIcon = Icons.cancel_rounded;
         break;
       default:
         statusColor = Colors.grey;
@@ -728,7 +749,6 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                 ),
               ),
               const SizedBox(width: 8),
-              // ✅ ADDED: Edit button for activity items
               Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFF6C63FF).withOpacity(0.1),
@@ -765,7 +785,11 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
   }
 
   Widget _buildTasksTab(List tasks) {
-    final active = tasks.where((t) => t.status != 'completed').toList();
+    // ✅ UPDATED: Exclude aborted tasks from active tasks
+    final active =
+        tasks
+            .where((t) => t.status != 'completed' && t.status != 'aborted')
+            .toList();
     final completed = tasks.where((t) => t.status == 'completed').toList();
 
     return DefaultTabController(
@@ -860,7 +884,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
     );
   }
 
-  // ✅ ENHANCED: Added edit functionality to task items
+  // ✅ UPDATED: Added aborted status handling
   Widget _buildEnhancedTaskItem(
     BuildContext context,
     dynamic task, {
@@ -885,6 +909,10 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
         statusColor = Colors.green;
         statusIcon = Icons.check_circle_rounded;
         break;
+      case 'aborted': // ✅ ADDED
+        statusColor = const Color(0xFFF44336);
+        statusIcon = Icons.cancel_rounded;
+        break;
       default:
         statusColor = Colors.grey;
         statusIcon = Icons.help_outline_rounded;
@@ -893,11 +921,15 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
     // Calculate due date status
     final now = DateTime.now();
     final dueDate = task.dueDate;
-    final isOverdue = dueDate.isBefore(now) && task.status != 'completed';
+    final isOverdue =
+        dueDate.isBefore(now) &&
+        task.status != 'completed' &&
+        task.status != 'aborted'; // ✅ UPDATED
     final isDueSoon =
         dueDate.difference(now).inDays <= 2 &&
         !isOverdue &&
-        task.status != 'completed';
+        task.status != 'completed' &&
+        task.status != 'aborted'; // ✅ UPDATED
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -974,7 +1006,6 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // ✅ ADDED: Edit button in task header
                     Container(
                       decoration: BoxDecoration(
                         color: const Color(0xFF6C63FF).withOpacity(0.1),
@@ -1019,9 +1050,14 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: isCompleted ? Colors.black54 : Colors.black87,
+                        color:
+                            (isCompleted || task.status == 'aborted')
+                                ? Colors.black54
+                                : Colors.black87, // ✅ UPDATED
                         decoration:
-                            isCompleted ? TextDecoration.lineThrough : null,
+                            (isCompleted || task.status == 'aborted')
+                                ? TextDecoration.lineThrough
+                                : null, // ✅ UPDATED
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1414,16 +1450,19 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
   }
 }
 
+// ✅ UPDATED: Added aborted parameter to DonutChartPainter
 class DonutChartPainter extends CustomPainter {
   final int inProgress;
   final int pending;
   final int completed;
+  final int aborted; // ✅ ADDED
   final int total;
 
   DonutChartPainter({
     required this.inProgress,
     required this.pending,
     required this.completed,
+    required this.aborted, // ✅ ADDED
     required this.total,
   });
 
@@ -1443,6 +1482,7 @@ class DonutChartPainter extends CustomPainter {
     final inProgressAngle = (inProgress / total) * 2 * 3.14159;
     final pendingAngle = (pending / total) * 2 * 3.14159;
     final completedAngle = (completed / total) * 2 * 3.14159;
+    final abortedAngle = (aborted / total) * 2 * 3.14159; // ✅ ADDED
 
     double startAngle = -3.14159 / 2; // Start from top
 
@@ -1479,6 +1519,19 @@ class DonutChartPainter extends CustomPainter {
         Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
         startAngle,
         completedAngle,
+        false,
+        paint,
+      );
+      startAngle += completedAngle;
+    }
+
+    // ✅ ADDED: Draw aborted arc
+    if (aborted > 0) {
+      paint.color = const Color(0xFFF44336);
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
+        startAngle,
+        abortedAngle,
         false,
         paint,
       );

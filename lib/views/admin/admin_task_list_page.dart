@@ -27,6 +27,7 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
     "In Review",
     "Completed",
     "Personal",
+    "Aborted",
   ];
   final List<String> statusFilter = [
     "all",
@@ -34,6 +35,7 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
     "in_progress",
     "completed",
     "personal",
+    "abort",
   ];
 
   final Map<String, IconData> tabIcons = {
@@ -42,6 +44,7 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
     "In Review": Icons.rate_review,
     "Completed": Icons.task_alt,
     "Personal": Icons.person_pin,
+    "Aborted": Icons.cancel_outlined,
   };
 
   final Map<String, Color> tabColors = {
@@ -50,6 +53,7 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
     "In Review": Colors.blue,
     "Completed": Colors.green,
     "Personal": Colors.teal,
+    "Aborted": Colors.red.shade900,
   };
   @override
   void initState() {
@@ -65,8 +69,9 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
 
   List<Task> _filterTasks(List<Task> tasks, String status) {
     if (status == "all") return tasks;
-    if (status == "personal")
+    if (status == "personal") {
       return tasks.where((t) => t.isPersonalTask).toList();
+    }
     return tasks.where((t) => t.status == status && !t.isPersonalTask).toList();
   }
 
@@ -94,6 +99,7 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
             ),
           ],
         ),
+        centerTitle: true,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -440,6 +446,8 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
         return "No tasks are currently under review. Tasks will appear here when they need approval.";
       case "Completed":
         return "No tasks have been completed yet. Keep working to see your achievements here.";
+      case "Aborted": // ✅ New
+        return "No tasks were aborted. All tasks are moving forward!";
       default:
         return "No tasks found in this category.";
     }

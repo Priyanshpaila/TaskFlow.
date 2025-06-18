@@ -139,10 +139,19 @@ class TaskService {
     throw Exception(msg);
   }
 
-  /// User/Admin: Update task status
-  Future<void> updateTaskStatus(String taskId, String newStatus) async {
+  /// User/Admin: Update task status with optional reason
+  Future<void> updateTaskStatus({
+    required String taskId,
+    required String newStatus,
+    String? reason, // ✅ optional reason
+  }) async {
     final token = await _getToken();
     if (token == null) throw Exception("Not authenticated");
+
+    final Map<String, dynamic> body = {
+      'status': newStatus,
+      if (reason != null && reason.trim().isNotEmpty) 'reason': reason,
+    };
 
     final response = await http.patch(
       Uri.parse('$baseUrl/tasks/$taskId'),
@@ -150,7 +159,7 @@ class TaskService {
         "Authorization": "Bearer $token",
         "Content-Type": "application/json",
       },
-      body: jsonEncode({'status': newStatus}),
+      body: jsonEncode(body),
     );
 
     if (response.statusCode != 200) {

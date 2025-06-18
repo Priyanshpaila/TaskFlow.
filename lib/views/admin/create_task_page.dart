@@ -689,7 +689,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage>
           isEditing ? 'Edit Task' : 'Create New Task',
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
-
+        centerTitle: true,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,

@@ -274,9 +274,11 @@ class _TaskCardState extends State<TaskCard>
                               ),
 
                               // Edit button - Prevent tap propagation
-                              if (widget.task.createdBy ==
-                                      widget.currentUserId ||
-                                  widget.isAdmin)
+                              if ((widget.task.createdBy ==
+                                          widget.currentUserId ||
+                                      widget.isAdmin) &&
+                                  widget.task.status != 'completed' &&
+                                  widget.task.status != 'abort')
                                 Container(
                                   margin: const EdgeInsets.only(left: 8),
                                   decoration: BoxDecoration(
@@ -479,8 +481,10 @@ class _TaskCardState extends State<TaskCard>
         return Colors.blue.shade600;
       case 'pending':
         return Colors.orange.shade600;
-      case 'cancelled':
-        return Colors.red.shade600;
+      case 'abort':
+        return Colors.red.shade900;
+      case 'forward':
+        return Colors.purple;
       default:
         return Colors.grey.shade600;
     }
@@ -494,8 +498,10 @@ class _TaskCardState extends State<TaskCard>
         return Icons.pending_actions;
       case 'pending':
         return Icons.hourglass_empty;
-      case 'cancelled':
+      case 'abort':
         return Icons.cancel_outlined;
+      case 'forward':
+        return Icons.forward;
       default:
         return Icons.help_outline;
     }

@@ -9,6 +9,7 @@ class Task {
   final DateTime? createdAt;
   final String createdBy;
   final String division;
+  final String? reason; // ✅ New field
 
   Task({
     required this.id,
@@ -21,6 +22,7 @@ class Task {
     this.createdAt,
     required this.createdBy,
     required this.division,
+    this.reason, // ✅ Include in constructor
   });
 
   /// ✅ Factory constructor to build Task from JSON
@@ -43,6 +45,7 @@ class Task {
             ? json['createdBy']
             : json['createdBy']['_id'],
     division: json['division'] ?? '',
+    reason: json['reason'], // ✅ Deserialize reason
   );
 
   /// ✅ Convert Task to JSON
@@ -57,9 +60,13 @@ class Task {
     'createdAt': createdAt?.toIso8601String(),
     'createdBy': createdBy,
     'division': division,
+    'reason': reason, // ✅ Serialize reason
   };
 
   /// ✅ Helper: Check if task is personal/self-assigned
   bool get isPersonalTask =>
       assignedTo.length == 1 && assignedTo.first == createdBy;
+  bool get isForwarded => status == 'forward';
+  bool get isAborted => status == 'abort';
+  bool get needsReason => isForwarded || isAborted;
 }

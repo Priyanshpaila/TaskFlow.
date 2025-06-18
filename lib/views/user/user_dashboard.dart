@@ -62,6 +62,7 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
     'High Priority',
     'History',
     'My Created',
+    'Aborted',
   ];
 
   final Map<String, IconData> filterIcons = {
@@ -71,6 +72,7 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
     'High Priority': Icons.priority_high,
     'History': Icons.history,
     'My Created': Icons.person,
+    'Aborted': Icons.cancel_outlined,
   };
 
   @override
@@ -112,6 +114,7 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
         offset: const Offset(0, 50),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 8,
+        color: Colors.white,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
@@ -425,6 +428,10 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
       final user = ref.read(authStateProvider).value;
       return tasks.where((t) => t.createdBy == user?.id).toList();
     }
+
+    if (filter == 'Aborted') {
+      return tasks.where((t) => t.status == 'abort').toList();
+    }
     return tasks
         .where((t) => t.status == filter.toLowerCase().replaceAll(' ', '_'))
         .toList();
@@ -440,6 +447,8 @@ class _UserDashboardState extends ConsumerState<UserDashboard>
         return Colors.red;
       case 'History':
         return Colors.green;
+      case 'Aborted':
+        return Colors.red.shade900;
       default:
         return Colors.deepPurple;
     }
