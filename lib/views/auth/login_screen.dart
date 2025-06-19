@@ -101,7 +101,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
       final authState = ref.read(authStateProvider);
 
-      // If error occurred, show fallback UI
       if (authState.hasError) {
         _triggerShake();
         _showErrorDialog(
@@ -111,7 +110,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         return;
       }
 
-      // If login succeeded
       final user = authState.value;
       if (user != null) {
         _showSuccessToast(context);
@@ -123,7 +121,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           );
         });
       } else {
-        // Should not reach here, but safeguard fallback
         _triggerShake();
         _showErrorDialog(context, 'Login failed. Please try again.');
       }
@@ -222,7 +219,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Error icon
                   Container(
                     width: 60,
                     height: 60,
@@ -237,8 +233,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // Title
                   Text(
                     "Login Failed",
                     style: TextStyle(
@@ -248,8 +242,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // Message
                   Text(
                     errorMessage,
                     style: TextStyle(
@@ -260,8 +252,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
-
-                  // Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -284,6 +274,537 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               ),
             ),
           ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authStateProvider);
+    final size = MediaQuery.of(context).size;
+    final isDesktop = size.width > 800; // Desktop breakpoint
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFCF5E5),
+      body: SafeArea(
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Center(
+            child: SingleChildScrollView(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: isDesktop ? 1200 : double.infinity,
+                ),
+                child:
+                    isDesktop
+                        ? _buildDesktopLayout(authState, size)
+                        : _buildMobileLayout(authState, size),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ✅ NEW: Desktop 2-column layout
+  Widget _buildDesktopLayout(AsyncValue authState, Size size) {
+    return Container(
+      margin: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Left Column - Image and Branding
+          Expanded(
+            flex: 5,
+            child: Container(
+              padding: const EdgeInsets.all(48),
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  bottomLeft: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFCF5E5), Color(0xFFF5E6D3)],
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo/Image
+                  Container(
+                    width: 300,
+                    height: 300,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 30,
+                          offset: const Offset(0, 15),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(40),
+                    child: Image.asset(
+                      'assets/images/LoginPageimg.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // Welcome Text
+                  const Text(
+                    "Welcome Back to TaskFlow",
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                      letterSpacing: 0.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Sign in to access your dashboard and continue managing your tasks efficiently.",
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey.shade600,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 40),
+
+                  // Benefits
+                  Column(
+                    children: [
+                      _buildBenefitItem(
+                        Icons.dashboard_outlined,
+                        "Access Dashboard",
+                      ),
+                      const SizedBox(height: 16),
+                      _buildBenefitItem(
+                        Icons.notifications_active_outlined,
+                        "Real-time Updates",
+                      ),
+                      const SizedBox(height: 16),
+                      _buildBenefitItem(
+                        Icons.security_outlined,
+                        "Secure Access",
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Right Column - Login Form
+          Expanded(
+            flex: 4,
+            child: Container(
+              padding: const EdgeInsets.all(48),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Back button
+                    Align(
+                      alignment: Alignment.topLeft,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back),
+                          onPressed:
+                              () => Navigator.pushReplacementNamed(
+                                context,
+                                '/auth',
+                              ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Heading
+                    const Text(
+                      "Welcome Back",
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    Text(
+                      "Sign in to continue",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+
+                    // Email Field
+                    _buildInputLabel("Email Address"),
+                    const SizedBox(height: 8),
+                    AnimatedBuilder(
+                      animation: _shakeController,
+                      builder:
+                          (context, child) => Transform.translate(
+                            offset: _emailShakeAnimation.value * size.width,
+                            child: child,
+                          ),
+                      child: TextFormField(
+                        controller: emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        validator: _validateEmail,
+                        decoration: _inputDecoration(
+                          hintText: "Enter your email",
+                          prefixIcon: Icons.email_outlined,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Password Field
+                    _buildInputLabel("Password"),
+                    const SizedBox(height: 8),
+                    AnimatedBuilder(
+                      animation: _shakeController,
+                      builder:
+                          (context, child) => Transform.translate(
+                            offset: _passwordShakeAnimation.value * size.width,
+                            child: child,
+                          ),
+                      child: TextFormField(
+                        controller: passController,
+                        obscureText: _obscurePassword,
+                        validator: _validatePassword,
+                        decoration: _inputDecoration(
+                          hintText: "Enter your password",
+                          prefixIcon: Icons.lock_outline,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: Colors.grey.shade600,
+                            ),
+                            onPressed:
+                                () => setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Login Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 2,
+                        ),
+                        onPressed: authState.isLoading ? null : _submit,
+                        child:
+                            authState.isLoading
+                                ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                                : const Text(
+                                  "Log In",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Signup Redirect
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Don't have an account?",
+                          style: TextStyle(color: Colors.grey.shade700),
+                        ),
+                        TextButton(
+                          onPressed:
+                              () => Navigator.pushNamed(context, '/signup'),
+                          child: const Text(
+                            "Sign Up",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Copyright
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 16.0),
+                        child: Text(
+                          "© TaskFlow. All rights reserved.",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ NEW: Benefit item widget for desktop layout
+  Widget _buildBenefitItem(IconData icon, String text) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: Colors.black87, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ✅ EXISTING: Mobile layout (unchanged)
+  Widget _buildMobileLayout(AsyncValue authState, Size size) {
+    return ResponsiveCard(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Align(
+                alignment: Alignment.topLeft,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed:
+                        () => Navigator.pushReplacementNamed(context, '/auth'),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Container(
+                  width: size.width * 0.5,
+                  height: size.width * 0.5,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(20),
+                  child: Image.asset(
+                    'assets/images/LoginPageimg.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Center(
+                child: Text(
+                  "Welcome Back",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              Center(
+                child: Text(
+                  "Sign in to continue",
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              _buildInputLabel("Email Address"),
+              const SizedBox(height: 8),
+              AnimatedBuilder(
+                animation: _shakeController,
+                builder:
+                    (context, child) => Transform.translate(
+                      offset: _emailShakeAnimation.value * size.width,
+                      child: child,
+                    ),
+                child: TextFormField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  validator: _validateEmail,
+                  decoration: _inputDecoration(
+                    hintText: "Enter your email",
+                    prefixIcon: Icons.email_outlined,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              _buildInputLabel("Password"),
+              const SizedBox(height: 8),
+              AnimatedBuilder(
+                animation: _shakeController,
+                builder:
+                    (context, child) => Transform.translate(
+                      offset: _passwordShakeAnimation.value * size.width,
+                      child: child,
+                    ),
+                child: TextFormField(
+                  controller: passController,
+                  obscureText: _obscurePassword,
+                  validator: _validatePassword,
+                  decoration: _inputDecoration(
+                    hintText: "Enter your password",
+                    prefixIcon: Icons.lock_outline,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.grey.shade600,
+                      ),
+                      onPressed:
+                          () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 2,
+                  ),
+                  onPressed: authState.isLoading ? null : _submit,
+                  child:
+                      authState.isLoading
+                          ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                          : const Text(
+                            "Log In",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Don't have an account?",
+                    style: TextStyle(color: Colors.grey.shade700),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pushNamed(context, '/signup'),
+                    child: const Text(
+                      "Sign Up",
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -330,214 +851,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final authState = ref.watch(authStateProvider);
-    final size = MediaQuery.of(context).size;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFFCF5E5),
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: Center(
-            child: SingleChildScrollView(
-              child: ResponsiveCard(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Align(
-                          alignment: Alignment.topLeft,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade200,
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              icon: const Icon(Icons.arrow_back),
-                              onPressed:
-                                  () => Navigator.pushReplacementNamed(
-                                    context,
-                                    '/auth',
-                                  ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Center(
-                          child: Container(
-                            width: size.width * 0.5,
-                            height: size.width * 0.5,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            padding: const EdgeInsets.all(20),
-                            child: Image.asset(
-                              'assets/images/LoginPageimg.png',
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        const Center(
-                          child: Text(
-                            "Welcome Back",
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                        Center(
-                          child: Text(
-                            "Sign in to continue",
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        _buildInputLabel("Email Address"),
-                        const SizedBox(height: 8),
-                        AnimatedBuilder(
-                          animation: _shakeController,
-                          builder:
-                              (context, child) => Transform.translate(
-                                offset:
-                                    _emailShakeAnimation.value *
-                                    MediaQuery.of(context).size.width,
-                                child: child,
-                              ),
-                          child: TextFormField(
-                            controller: emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                            validator: _validateEmail,
-                            decoration: _inputDecoration(
-                              hintText: "Enter your email",
-                              prefixIcon: Icons.email_outlined,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        _buildInputLabel("Password"),
-                        const SizedBox(height: 8),
-                        AnimatedBuilder(
-                          animation: _shakeController,
-                          builder:
-                              (context, child) => Transform.translate(
-                                offset:
-                                    _passwordShakeAnimation.value *
-                                    MediaQuery.of(context).size.width,
-                                child: child,
-                              ),
-                          child: TextFormField(
-                            controller: passController,
-                            obscureText: _obscurePassword,
-                            validator: _validatePassword,
-                            decoration: _inputDecoration(
-                              hintText: "Enter your password",
-                              prefixIcon: Icons.lock_outline,
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
-                                  color: Colors.grey.shade600,
-                                ),
-                                onPressed:
-                                    () => setState(
-                                      () =>
-                                          _obscurePassword = !_obscurePassword,
-                                    ),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 32),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 56,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.black,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              elevation: 2,
-                            ),
-                            onPressed: authState.isLoading ? null : _submit,
-                            child:
-                                authState.isLoading
-                                    ? const SizedBox(
-                                      height: 24,
-                                      width: 24,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                    : const Text(
-                                      "Log In",
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              "Don't have an account?",
-                              style: TextStyle(color: Colors.grey.shade700),
-                            ),
-                            TextButton(
-                              onPressed:
-                                  () => Navigator.pushNamed(context, '/signup'),
-                              child: const Text(
-                                "Sign Up",
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

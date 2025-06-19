@@ -299,6 +299,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final size = MediaQuery.of(context).size;
+    final isDesktop = size.width > 800; // Desktop breakpoint
 
     return Scaffold(
       backgroundColor: const Color(0xFFFCF5E5),
@@ -307,318 +308,767 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
           opacity: _fadeAnimation,
           child: Center(
             child: SingleChildScrollView(
-              child: ResponsiveCard(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: isDesktop ? 1200 : double.infinity,
+                ),
+                child:
+                    isDesktop
+                        ? _buildDesktopLayout(authState, size)
+                        : _buildMobileLayout(authState, size),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ✅ NEW: Desktop 2-column layout
+  Widget _buildDesktopLayout(AsyncValue authState, Size size) {
+    return Container(
+      margin: const EdgeInsets.all(25),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Left Column - Image and Branding
+          Expanded(
+            flex: 5,
+            child: Container(
+              padding: const EdgeInsets.all(48),
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  bottomLeft: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFCF5E5), Color(0xFFF5E6D3)],
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo/Image
+                  Container(
+                    width: 300,
+                    height: 300,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 30,
+                          offset: const Offset(0, 15),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(40),
+                    child: Image.asset(
+                      'assets/images/LoginPageimg.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // Welcome Text
+                  const Text(
+                    "Join TaskFlow Today",
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                      letterSpacing: 0.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Create your account and start managing tasks efficiently with our powerful platform.",
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey.shade600,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 40),
+
+                  // Features
+                  Column(
+                    children: [
+                      _buildFeatureItem(Icons.task_alt, "Task Management"),
+                      const SizedBox(height: 16),
+                      _buildFeatureItem(Icons.people, "Team Collaboration"),
+                      const SizedBox(height: 16),
+                      _buildFeatureItem(Icons.analytics, "Progress Tracking"),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Right Column - Form
+          Expanded(
+            flex: 4,
+            child: Container(
+              padding: const EdgeInsets.all(48),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Back button
+                    Align(
+                      alignment: Alignment.topLeft,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back),
+                          onPressed:
+                              () => Navigator.pushReplacementNamed(
+                                context,
+                                '/auth',
+                              ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Heading
+                    const Text(
+                      "Create Account",
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    Text(
+                      "Sign up to get started",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Form Fields in 2 columns where appropriate
+                    Row(
                       children: [
-                        // Back button
-                        Align(
-                          alignment: Alignment.topLeft,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade200,
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              icon: const Icon(Icons.arrow_back),
-                              onPressed:
-                                  () => Navigator.pushReplacementNamed(
-                                    context,
-                                    '/auth',
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildInputLabel("Username"),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: usernameController,
+                                textInputAction: TextInputAction.next,
+                                validator: _validateUsername,
+                                decoration: _inputDecoration(
+                                  hintText: "Choose a username",
+                                  prefixIcon: Icons.person_outline,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildInputLabel("Email Address"),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.next,
+                                validator: _validateEmail,
+                                decoration: _inputDecoration(
+                                  hintText: "Enter your email",
+                                  prefixIcon: Icons.email_outlined,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Division Field (full width)
+                    _buildInputLabel("Division"),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: divisionController,
+                      readOnly: true,
+                      onTap: _showDivisionBottomSheet,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Division is required';
+                        }
+                        return null;
+                      },
+                      decoration: _inputDecoration(
+                        hintText: "Select division",
+                        prefixIcon: Icons.business_outlined,
+                        suffixIcon: const Icon(Icons.arrow_drop_down),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Password fields in 2 columns
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildInputLabel("Password"),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: passController,
+                                obscureText: _obscurePassword,
+                                textInputAction: TextInputAction.next,
+                                validator: _validatePassword,
+                                decoration: _inputDecoration(
+                                  hintText: "Create a password",
+                                  prefixIcon: Icons.lock_outline,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                    onPressed:
+                                        () => setState(
+                                          () =>
+                                              _obscurePassword =
+                                                  !_obscurePassword,
+                                        ),
                                   ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildInputLabel("Confirm Password"),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: confirmPassController,
+                                obscureText: _obscureConfirmPassword,
+                                validator: _validateConfirmPassword,
+                                decoration: _inputDecoration(
+                                  hintText: "Confirm your password",
+                                  prefixIcon: Icons.lock_outline,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureConfirmPassword
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                    onPressed:
+                                        () => setState(
+                                          () =>
+                                              _obscureConfirmPassword =
+                                                  !_obscureConfirmPassword,
+                                        ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Terms and Conditions
+                    Row(
+                      children: [
+                        SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: Checkbox(
+                            value: _agreedToTerms,
+                            onChanged:
+                                (value) =>
+                                    setState(() => _agreedToTerms = value!),
+                            activeColor: Colors.black,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(4),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
-
-                        // Image
-                        Center(
-                          child: Container(
-                            width: size.width * 0.4,
-                            height: size.width * 0.4,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 10),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: RichText(
+                            text: TextSpan(
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 14,
+                              ),
+                              children: const [
+                                TextSpan(text: "I agree to the "),
+                                TextSpan(
+                                  text: "Terms of Service",
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                                TextSpan(text: " and "),
+                                TextSpan(
+                                  text: "Privacy Policy",
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.underline,
+                                  ),
                                 ),
                               ],
-                            ),
-                            padding: const EdgeInsets.all(20),
-                            child: Image.asset(
-                              'assets/images/LoginPageimg.png',
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Heading
-                        const Center(
-                          child: Text(
-                            "Create Account",
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                        Center(
-                          child: Text(
-                            "Sign up to get started",
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Username Field
-                        _buildInputLabel("Username"),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: usernameController,
-                          textInputAction: TextInputAction.next,
-                          validator: _validateUsername,
-                          decoration: _inputDecoration(
-                            hintText: "Choose a username",
-                            prefixIcon: Icons.person_outline,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Email Field
-                        _buildInputLabel("Email Address"),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          validator: _validateEmail,
-                          decoration: _inputDecoration(
-                            hintText: "Enter your email",
-                            prefixIcon: Icons.email_outlined,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Division Field - Updated to show bottom sheet
-                        _buildInputLabel("Division"),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: divisionController,
-                          readOnly: true,
-                          onTap: _showDivisionBottomSheet,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Division is required';
-                            }
-                            return null;
-                          },
-                          decoration: _inputDecoration(
-                            hintText: "Select division",
-                            prefixIcon: Icons.business_outlined,
-                            suffixIcon: const Icon(Icons.arrow_drop_down),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Password Field
-                        _buildInputLabel("Password"),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: passController,
-                          obscureText: _obscurePassword,
-                          textInputAction: TextInputAction.next,
-                          validator: _validatePassword,
-                          decoration: _inputDecoration(
-                            hintText: "Create a password",
-                            prefixIcon: Icons.lock_outline,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                                color: Colors.grey.shade600,
-                              ),
-                              onPressed:
-                                  () => setState(
-                                    () => _obscurePassword = !_obscurePassword,
-                                  ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Confirm Password Field
-                        _buildInputLabel("Confirm Password"),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: confirmPassController,
-                          obscureText: _obscureConfirmPassword,
-                          validator: _validateConfirmPassword,
-                          decoration: _inputDecoration(
-                            hintText: "Confirm your password",
-                            prefixIcon: Icons.lock_outline,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscureConfirmPassword
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                                color: Colors.grey.shade600,
-                              ),
-                              onPressed:
-                                  () => setState(
-                                    () =>
-                                        _obscureConfirmPassword =
-                                            !_obscureConfirmPassword,
-                                  ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Terms and Conditions
-                        Row(
-                          children: [
-                            SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: Checkbox(
-                                value: _agreedToTerms,
-                                onChanged:
-                                    (value) =>
-                                        setState(() => _agreedToTerms = value!),
-                                activeColor: Colors.black,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: RichText(
-                                text: TextSpan(
-                                  style: TextStyle(
-                                    color: Colors.grey.shade700,
-                                    fontSize: 14,
-                                  ),
-                                  children: const [
-                                    TextSpan(text: "I agree to the "),
-                                    TextSpan(
-                                      text: "Terms of Service",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.bold,
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                    ),
-                                    TextSpan(text: " and "),
-                                    TextSpan(
-                                      text: "Privacy Policy",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.bold,
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Signup Button
-                        SizedBox(
-                          width: double.infinity,
-                          height: 56,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.black,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              elevation: 2,
-                            ),
-                            onPressed: authState.isLoading ? null : _submit,
-                            child:
-                                authState.isLoading
-                                    ? const SizedBox(
-                                      height: 24,
-                                      width: 24,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                    : const Text(
-                                      "Create Account",
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Login Redirect
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              "Already have an account?",
-                              style: TextStyle(color: Colors.grey.shade700),
-                            ),
-                            TextButton(
-                              onPressed:
-                                  () => Navigator.pushReplacementNamed(
-                                    context,
-                                    '/login',
-                                  ),
-                              child: const Text(
-                                "Log In",
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // Copyright
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(
-                              "© TaskFlow. All rights reserved.",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 32),
+
+                    // Signup Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 2,
+                        ),
+                        onPressed: authState.isLoading ? null : _submit,
+                        child:
+                            authState.isLoading
+                                ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                                : const Text(
+                                  "Create Account",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Login Redirect
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Already have an account?",
+                          style: TextStyle(color: Colors.grey.shade700),
+                        ),
+                        TextButton(
+                          onPressed:
+                              () => Navigator.pushReplacementNamed(
+                                context,
+                                '/login',
+                              ),
+                          child: const Text(
+                            "Log In",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Copyright
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          "© TaskFlow. All rights reserved.",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ NEW: Feature item widget for desktop layout
+  Widget _buildFeatureItem(IconData icon, String text) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: Colors.black87, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ✅ EXISTING: Mobile layout (unchanged)
+  Widget _buildMobileLayout(AsyncValue authState, Size size) {
+    return ResponsiveCard(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Back button
+              Align(
+                alignment: Alignment.topLeft,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed:
+                        () => Navigator.pushReplacementNamed(context, '/auth'),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Image
+              Center(
+                child: Container(
+                  width: size.width * 0.4,
+                  height: size.width * 0.4,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(20),
+                  child: Image.asset(
+                    'assets/images/LoginPageimg.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Heading
+              const Center(
+                child: Text(
+                  "Create Account",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              Center(
+                child: Text(
+                  "Sign up to get started",
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Username Field
+              _buildInputLabel("Username"),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: usernameController,
+                textInputAction: TextInputAction.next,
+                validator: _validateUsername,
+                decoration: _inputDecoration(
+                  hintText: "Choose a username",
+                  prefixIcon: Icons.person_outline,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Email Field
+              _buildInputLabel("Email Address"),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                validator: _validateEmail,
+                decoration: _inputDecoration(
+                  hintText: "Enter your email",
+                  prefixIcon: Icons.email_outlined,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Division Field
+              _buildInputLabel("Division"),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: divisionController,
+                readOnly: true,
+                onTap: _showDivisionBottomSheet,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Division is required';
+                  }
+                  return null;
+                },
+                decoration: _inputDecoration(
+                  hintText: "Select division",
+                  prefixIcon: Icons.business_outlined,
+                  suffixIcon: const Icon(Icons.arrow_drop_down),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Password Field
+              _buildInputLabel("Password"),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: passController,
+                obscureText: _obscurePassword,
+                textInputAction: TextInputAction.next,
+                validator: _validatePassword,
+                decoration: _inputDecoration(
+                  hintText: "Create a password",
+                  prefixIcon: Icons.lock_outline,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                      color: Colors.grey.shade600,
+                    ),
+                    onPressed:
+                        () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Confirm Password Field
+              _buildInputLabel("Confirm Password"),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: confirmPassController,
+                obscureText: _obscureConfirmPassword,
+                validator: _validateConfirmPassword,
+                decoration: _inputDecoration(
+                  hintText: "Confirm your password",
+                  prefixIcon: Icons.lock_outline,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureConfirmPassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                      color: Colors.grey.shade600,
+                    ),
+                    onPressed:
+                        () => setState(
+                          () =>
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword,
+                        ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Terms and Conditions
+              Row(
+                children: [
+                  SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: Checkbox(
+                      value: _agreedToTerms,
+                      onChanged:
+                          (value) => setState(() => _agreedToTerms = value!),
+                      activeColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: RichText(
+                      text: TextSpan(
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 14,
+                        ),
+                        children: const [
+                          TextSpan(text: "I agree to the "),
+                          TextSpan(
+                            text: "Terms of Service",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                          TextSpan(text: " and "),
+                          TextSpan(
+                            text: "Privacy Policy",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+
+              // Signup Button
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 2,
+                  ),
+                  onPressed: authState.isLoading ? null : _submit,
+                  child:
+                      authState.isLoading
+                          ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                          : const Text(
+                            "Create Account",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Login Redirect
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Already have an account?",
+                    style: TextStyle(color: Colors.grey.shade700),
+                  ),
+                  TextButton(
+                    onPressed:
+                        () => Navigator.pushReplacementNamed(context, '/login'),
+                    child: const Text(
+                      "Log In",
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              // Copyright
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    "© TaskFlow. All rights reserved.",
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -673,7 +1123,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
   }
 }
 
-// Division Bottom Sheet Widget
+// Division Bottom Sheet Widget (unchanged)
 class DivisionBottomSheet extends ConsumerStatefulWidget {
   final Function(String) onDivisionSelected;
   final String currentDivision;
@@ -705,7 +1155,6 @@ class _DivisionBottomSheetState extends ConsumerState<DivisionBottomSheet> {
     final size = MediaQuery.of(context).size;
     final isTablet = size.width > 600;
 
-    // Filter divisions based on search query
     final filteredDivisions =
         divisions
             .where(
@@ -725,7 +1174,6 @@ class _DivisionBottomSheetState extends ConsumerState<DivisionBottomSheet> {
       ),
       child: Column(
         children: [
-          // Handle bar
           Container(
             margin: const EdgeInsets.only(top: 12),
             width: 40,
@@ -735,8 +1183,6 @@ class _DivisionBottomSheetState extends ConsumerState<DivisionBottomSheet> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-
-          // Header
           Padding(
             padding: const EdgeInsets.all(20),
             child: Row(
@@ -756,8 +1202,6 @@ class _DivisionBottomSheetState extends ConsumerState<DivisionBottomSheet> {
               ],
             ),
           ),
-
-          // Search bar and Add button row
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
@@ -806,10 +1250,7 @@ class _DivisionBottomSheetState extends ConsumerState<DivisionBottomSheet> {
               ],
             ),
           ),
-
           const SizedBox(height: 16),
-
-          // Divisions list
           Expanded(
             child:
                 filteredDivisions.isEmpty
@@ -904,7 +1345,6 @@ class _DivisionBottomSheetState extends ConsumerState<DivisionBottomSheet> {
     try {
       await ref.read(divisionListProvider.notifier).addDivision(newDivision);
 
-      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Division "$newDivision" added successfully'),
@@ -912,7 +1352,6 @@ class _DivisionBottomSheetState extends ConsumerState<DivisionBottomSheet> {
         ),
       );
 
-      // Select the newly added division
       widget.onDivisionSelected(newDivision);
       Navigator.pop(context);
     } catch (e) {
