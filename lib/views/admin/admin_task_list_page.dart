@@ -72,7 +72,7 @@ class _AdminTaskListPageState extends ConsumerState<AdminTaskListPage>
     if (status == "personal") {
       return tasks.where((t) => t.isPersonalTask).toList();
     }
-    return tasks.where((t) => t.status == status && !t.isPersonalTask).toList();
+    return tasks.where((t) => t.status == status).toList();
   }
 
   @override

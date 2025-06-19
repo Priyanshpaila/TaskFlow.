@@ -5,3 +5,5 @@ const String baseUrl = 'http://192.168.13.74:8000/api';
 const String signupUrl = '$baseUrl/auth/signup';
 const String loginUrl = '$baseUrl/auth/login';
 const String meUrl = '$baseUrl/auth/me';
+const String getDivisionsUrl = '$baseUrl/divisions';
+const String addDivisionUrl = '$baseUrl/divisions';

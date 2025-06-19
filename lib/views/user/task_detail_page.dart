@@ -207,6 +207,49 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                               ],
                             ),
                           ),
+                        const SizedBox(height: 20),
+                        if (widget.task.status == 'forward' ||
+                            widget.task.status == 'abort')
+                          Container(
+                            margin: const EdgeInsets.only(top: 16),
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.orange.shade100,
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.info_outline,
+                                    color: Colors.orange,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Text(
+                                    widget.task.reason ?? "No reason provided.",
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      color: Colors.black87,
+                                      height: 1.6,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         const SizedBox(height: 28),
 
                         // Enhanced metadata chips
@@ -900,8 +943,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     final statusOrder = [
       'pending',
       'in_progress',
-      'completed',
       'forward',
+      'completed',
       'abort',
     ];
     final currentIndex = statusOrder.indexOf(value);

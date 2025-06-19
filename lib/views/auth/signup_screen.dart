@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:task_flow_app/state/division_state.dart';
 import '../../state/auth_state.dart';
 import '../widgets/responsive_card.dart';
 
@@ -39,6 +40,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
       CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
     );
     _animationController.forward();
+
+    // Fetch divisions
+    Future.microtask(() {
+      ref.read(divisionListProvider.notifier).fetchDivisions();
+    });
   }
 
   @override
@@ -93,11 +99,21 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
     return null;
   }
 
-  String? _validateDivision(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Division is required';
-    }
-    return null;
+  void _showDivisionBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => DivisionBottomSheet(
+            onDivisionSelected: (division) {
+              setState(() {
+                divisionController.text = division;
+              });
+            },
+            currentDivision: divisionController.text,
+          ),
+    );
   }
 
   void _submit() async {
@@ -134,7 +150,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
             emailController.text.trim(),
             passController.text.trim(),
             confirmPassController.text.trim(),
-            divisionController.text.trim(),
+            divisionController.text.trim().toUpperCase(),
           );
 
       final user = ref.read(authStateProvider).value;
@@ -395,22 +411,25 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                         ),
                         const SizedBox(height: 20),
 
-                        // Division Field
+                        // Division Field - Updated to show bottom sheet
                         _buildInputLabel("Division"),
                         const SizedBox(height: 8),
                         TextFormField(
                           controller: divisionController,
-                          textInputAction: TextInputAction.next,
-                          validator: _validateDivision,
-                          inputFormatters: [
-                            UpperCaseTextFormatter(), // 👈 Add this custom formatter
-                          ],
+                          readOnly: true,
+                          onTap: _showDivisionBottomSheet,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Division is required';
+                            }
+                            return null;
+                          },
                           decoration: _inputDecoration(
-                            hintText: "Enter your division",
-                            prefixIcon: Icons.apartment_outlined,
+                            hintText: "Select division",
+                            prefixIcon: Icons.business_outlined,
+                            suffixIcon: const Icon(Icons.arrow_drop_down),
                           ),
                         ),
-
                         const SizedBox(height: 20),
 
                         // Password Field
@@ -427,8 +446,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscurePassword
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
                                 color: Colors.grey.shade600,
                               ),
                               onPressed:
@@ -453,8 +472,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscureConfirmPassword
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
                                 color: Colors.grey.shade600,
                               ),
                               onPressed:
@@ -651,6 +670,259 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
         borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
       ),
     );
+  }
+}
+
+// Division Bottom Sheet Widget
+class DivisionBottomSheet extends ConsumerStatefulWidget {
+  final Function(String) onDivisionSelected;
+  final String currentDivision;
+
+  const DivisionBottomSheet({
+    super.key,
+    required this.onDivisionSelected,
+    required this.currentDivision,
+  });
+
+  @override
+  ConsumerState<DivisionBottomSheet> createState() =>
+      _DivisionBottomSheetState();
+}
+
+class _DivisionBottomSheetState extends ConsumerState<DivisionBottomSheet> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final divisions = ref.watch(divisionListProvider);
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width > 600;
+
+    // Filter divisions based on search query
+    final filteredDivisions =
+        divisions
+            .where(
+              (division) =>
+                  division.toLowerCase().contains(_searchQuery.toLowerCase()),
+            )
+            .toList();
+
+    return Container(
+      height: size.height * (isTablet ? 0.6 : 0.75),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                const Text(
+                  'Select Division',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.grey.shade100,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Search bar and Add button row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Search divisions...',
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 16,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: () => _addNewDivision(),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: Text(isTablet ? 'Add Division' : 'Add'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isTablet ? 20 : 16,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Divisions list
+          Expanded(
+            child:
+                filteredDivisions.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: filteredDivisions.length,
+                      itemBuilder: (context, index) {
+                        final division = filteredDivisions[index];
+                        final isSelected = division == widget.currentDivision;
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            title: Text(
+                              division,
+                              style: TextStyle(
+                                fontWeight:
+                                    isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                              ),
+                            ),
+                            trailing:
+                                isSelected
+                                    ? const Icon(
+                                      Icons.check_circle,
+                                      color: Colors.green,
+                                    )
+                                    : const Icon(
+                                      Icons.arrow_forward_ios,
+                                      size: 16,
+                                    ),
+                            onTap: () {
+                              widget.onDivisionSelected(division);
+                              Navigator.pop(context);
+                            },
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            tileColor:
+                                isSelected
+                                    ? Colors.green.shade50
+                                    : Colors.grey.shade50,
+                          ),
+                        );
+                      },
+                    ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search_off, size: 64, color: Colors.grey.shade400),
+          const SizedBox(height: 16),
+          Text(
+            _searchQuery.isEmpty
+                ? 'No divisions available'
+                : 'No divisions found for "$_searchQuery"',
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 8),
+          if (_searchQuery.isNotEmpty)
+            Text(
+              'Tap "Add" to create this division',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _addNewDivision() async {
+    final newDivision = _searchController.text.trim().toUpperCase();
+
+    if (newDivision.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a division name'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    try {
+      await ref.read(divisionListProvider.notifier).addDivision(newDivision);
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Division "$newDivision" added successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Select the newly added division
+      widget.onDivisionSelected(newDivision);
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to add division: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
 

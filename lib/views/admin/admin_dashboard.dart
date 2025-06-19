@@ -19,15 +19,17 @@ class AdminDashboard extends ConsumerStatefulWidget {
 }
 
 class _AdminDashboardState extends ConsumerState<AdminDashboard>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
   bool _showFab = true;
+  bool _isRefreshing = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addObserver(this);
 
     // Hide FAB when scrolling down, show when scrolling up
     _scrollController.addListener(() {
@@ -43,17 +45,71 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
         }
       }
     });
+
+    // Initial data fetch
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshData();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Refresh data when app comes back to foreground
+    if (state == AppLifecycleState.resumed) {
+      _refreshData();
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     _scrollController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  // ✅ FIXED: Proper data refresh method
+  Future<void> _refreshData() async {
+    if (_isRefreshing) return;
+
+    setState(() => _isRefreshing = true);
+
+    try {
+      // Force refresh both providers
+      await Future.wait([
+        ref.refresh(taskListProvider.future),
+        ref.refresh(userListProvider.future),
+      ]);
+
+      // Small delay to ensure UI updates
+      await Future.delayed(const Duration(milliseconds: 300));
+    } catch (e) {
+      print('Error refreshing data: $e');
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to refresh data: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: _refreshData,
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isRefreshing = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // ✅ FIXED: Watch providers with proper error handling
     final taskAsync = ref.watch(taskListProvider);
     final usersAsync = ref.watch(userListProvider);
 
@@ -73,6 +129,21 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 20),
         ),
         centerTitle: true,
+        actions: [
+          // ✅ ADDED: Manual refresh button
+          IconButton(
+            icon:
+                _isRefreshing
+                    ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : const Icon(Icons.refresh),
+            onPressed: _isRefreshing ? null : _refreshData,
+            tooltip: 'Refresh Data',
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(height: 1, color: Colors.grey.withOpacity(0.2)),
@@ -81,11 +152,15 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
       floatingActionButton:
           _showFab
               ? FloatingActionButton.extended(
-                onPressed: () {
-                  Navigator.push(
+                onPressed: () async {
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const CreateTaskPage()),
                   );
+                  // ✅ FIXED: Refresh data after creating task
+                  if (result == true) {
+                    _refreshData();
+                  }
                 },
                 backgroundColor: const Color(0xFF6C63FF),
                 icon: const Icon(Icons.add, color: Colors.white),
@@ -101,10 +176,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
       body: taskAsync.when(
         data: (tasks) {
           return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(taskListProvider);
-              ref.invalidate(userListProvider);
-            },
+            onRefresh: _refreshData, // ✅ FIXED: Use proper refresh method
             color: const Color(0xFF6C63FF),
             child: CustomScrollView(
               controller: _scrollController,
@@ -113,10 +185,41 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                 // Welcome Header
                 SliverToBoxAdapter(child: _buildWelcomeHeader(greeting, date)),
 
+                // ✅ ADDED: Data freshness indicator
+                if (_isRefreshing)
+                  SliverToBoxAdapter(
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6C63FF).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Updating data...',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: const Color(0xFF6C63FF),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                 // Dashboard Tabs
                 SliverToBoxAdapter(
                   child: Container(
-                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                    margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
@@ -224,24 +327,39 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
   }
 
   Widget _buildOverviewTab(List tasks, AsyncValue usersAsync) {
+    // ✅ FIXED: Ensure proper task counting with null safety
     final total = tasks.length;
-    final pending = tasks.where((t) => t.status == 'pending').length;
-    final inProgress = tasks.where((t) => t.status == 'in_progress').length;
-    final completed = tasks.where((t) => t.status == 'completed').length;
-    final aborted = tasks.where((t) => t.status == 'aborted').length; // ✅ ADDED
+    final pending = tasks.where((t) => t?.status == 'pending').length;
+    final inProgress = tasks.where((t) => t?.status == 'in_progress').length;
+    final completed = tasks.where((t) => t?.status == 'completed').length;
+    final abort = tasks.where((t) => t?.status == 'abort').length;
+    final forward = tasks.where((t) => t?.status == 'forward').length;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Summary Cards - Updated to include aborted
-          _buildSummaryCards(total, inProgress, pending, completed, aborted),
+          // Summary Cards
+          _buildSummaryCards(
+            total,
+            inProgress,
+            pending,
+            completed,
+            abort,
+            forward,
+          ),
 
           const SizedBox(height: 24),
 
-          // Task Progress Chart - Updated to include aborted
-          _buildTaskProgressChart(inProgress, pending, completed, aborted),
+          // Task Progress Chart
+          _buildTaskProgressChart(
+            inProgress,
+            pending,
+            completed,
+            abort,
+            forward,
+          ),
 
           const SizedBox(height: 24),
 
@@ -254,51 +372,154 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
     );
   }
 
-  // ✅ UPDATED: Added aborted parameter and card
   Widget _buildSummaryCards(
     int total,
     int inProgress,
     int pending,
     int completed,
-    int aborted, // ✅ ADDED
+    int abort,
+    int forward,
   ) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      childAspectRatio: 1.5,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      children: [
-        _buildEnhancedSummaryCard(
-          "In Progress",
-          inProgress,
-          const Color(0xFF6C63FF),
-          Icons.timelapse_rounded,
-          inProgress > 0 ? (inProgress / total * 100).toInt() : 0,
-        ),
-        _buildEnhancedSummaryCard(
-          "Pending",
-          pending,
-          const Color(0xFFFF9800),
-          Icons.pending_actions_rounded,
-          pending > 0 ? (pending / total * 100).toInt() : 0,
-        ),
-        _buildEnhancedSummaryCard(
-          "Completed",
-          completed,
-          const Color(0xFF4CAF50),
-          Icons.check_circle_outline_rounded,
-          completed > 0 ? (completed / total * 100).toInt() : 0,
-        ),
-        _buildEnhancedSummaryCard(
-          "Aborted", // ✅ ADDED
-          aborted,
-          const Color(0xFFF44336), // Red color for aborted
-          Icons.cancel_outlined,
-          aborted > 0 ? (aborted / total * 100).toInt() : 0,
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDesktop = constraints.maxWidth > 600;
+
+        if (isDesktop) {
+          return Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildEnhancedSummaryCard(
+                      "In Progress",
+                      inProgress,
+                      const Color(0xFF6C63FF),
+                      Icons.timelapse_rounded,
+                      total > 0 ? (inProgress / total * 100).toInt() : 0,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildEnhancedSummaryCard(
+                      "Pending",
+                      pending,
+                      const Color(0xFFFF9800),
+                      Icons.pending_actions_rounded,
+                      total > 0 ? (pending / total * 100).toInt() : 0,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildEnhancedSummaryCard(
+                      "Completed",
+                      completed,
+                      const Color(0xFF4CAF50),
+                      Icons.check_circle_outline_rounded,
+                      total > 0 ? (completed / total * 100).toInt() : 0,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildEnhancedSummaryCard(
+                      "Forwarded",
+                      forward,
+                      const Color(0xFF2196F3),
+                      Icons.forward_outlined,
+                      total > 0 ? (forward / total * 100).toInt() : 0,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildEnhancedSummaryCard(
+                      "Aborted",
+                      abort,
+                      const Color(0xFFF44336),
+                      Icons.cancel_outlined,
+                      total > 0 ? (abort / total * 100).toInt() : 0,
+                    ),
+                  ),
+                  const Expanded(child: SizedBox()),
+                ],
+              ),
+            ],
+          );
+        } else {
+          return Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildEnhancedSummaryCard(
+                      "In Progress",
+                      inProgress,
+                      const Color(0xFF6C63FF),
+                      Icons.timelapse_rounded,
+                      total > 0 ? (inProgress / total * 100).toInt() : 0,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildEnhancedSummaryCard(
+                      "Pending",
+                      pending,
+                      const Color(0xFFFF9800),
+                      Icons.pending_actions_rounded,
+                      total > 0 ? (pending / total * 100).toInt() : 0,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildEnhancedSummaryCard(
+                      "Completed",
+                      completed,
+                      const Color(0xFF4CAF50),
+                      Icons.check_circle_outline_rounded,
+                      total > 0 ? (completed / total * 100).toInt() : 0,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildEnhancedSummaryCard(
+                      "Forwarded",
+                      forward,
+                      const Color(0xFF2196F3),
+                      Icons.forward_outlined,
+                      total > 0 ? (forward / total * 100).toInt() : 0,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildEnhancedSummaryCard(
+                      "Aborted",
+                      abort,
+                      const Color(0xFFF44336),
+                      Icons.cancel_outlined,
+                      total > 0 ? (abort / total * 100).toInt() : 0,
+                    ),
+                  ),
+                  const Expanded(child: SizedBox()),
+                ],
+              ),
+            ],
+          );
+        }
+      },
     );
   }
 
@@ -309,83 +530,75 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
     IconData icon,
     int percentage,
   ) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Container(
-          padding: const EdgeInsets.all(11),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.all(16), // ✅ FIXED: Increased padding
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              // Header row with icon and percentage
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(icon, color: color, size: 14),
-                  ),
-                  const Spacer(),
-                  Text(
-                    "$percentage%",
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: color,
-                    ),
-                  ),
-                ],
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 16),
               ),
-              const SizedBox(height: 4),
-
-              // Count
+              const Spacer(),
               Text(
-                count.toString(),
+                "$percentage%",
                 style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
                   color: color,
                 ),
               ),
-
-              // Label
-              Text(
-                label,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: Colors.black87,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 8),
+          Text(
+            count.toString(),
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: Colors.black87,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  // ✅ UPDATED: Added aborted parameter and legend
   Widget _buildTaskProgressChart(
     int inProgress,
     int pending,
     int completed,
-    int aborted,
+    int abort,
+    int forward,
   ) {
-    final total = inProgress + pending + completed + aborted; // ✅ UPDATED
+    final total = inProgress + pending + completed + abort + forward;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -423,7 +636,6 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                 total > 0
                     ? Row(
                       children: [
-                        // Custom Donut Chart
                         Expanded(
                           flex: 3,
                           child: Center(
@@ -432,7 +644,6 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                               height: 150,
                               child: Stack(
                                 children: [
-                                  // Background circle
                                   Container(
                                     width: 150,
                                     height: 150,
@@ -441,18 +652,17 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                                       color: Colors.grey.shade200,
                                     ),
                                   ),
-                                  // Progress segments
                                   CustomPaint(
                                     size: const Size(150, 150),
                                     painter: DonutChartPainter(
                                       inProgress: inProgress,
                                       pending: pending,
                                       completed: completed,
-                                      aborted: aborted, // ✅ ADDED
+                                      abort: abort,
+                                      forward: forward,
                                       total: total,
                                     ),
                                   ),
-                                  // Center text
                                   Center(
                                     child: Column(
                                       mainAxisAlignment:
@@ -505,11 +715,16 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                                 const Color(0xFF4CAF50),
                               ),
                               const SizedBox(height: 12),
-                              // ✅ ADDED: Aborted legend item
                               _buildChartLegendItem(
                                 "Aborted",
-                                aborted,
+                                abort,
                                 const Color(0xFFF44336),
+                              ),
+                              const SizedBox(height: 12),
+                              _buildChartLegendItem(
+                                "Forwarded",
+                                forward,
+                                const Color(0xFF2196F3),
                               ),
                             ],
                           ),
@@ -557,14 +772,14 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
             Text(
               label,
               style: GoogleFonts.poppins(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: Colors.black87,
               ),
             ),
             Text(
               "$count tasks",
-              style: GoogleFonts.poppins(fontSize: 10, color: Colors.black54),
+              style: GoogleFonts.poppins(fontSize: 9, color: Colors.black54),
             ),
           ],
         ),
@@ -573,11 +788,8 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
   }
 
   Widget _buildRecentActivity(List tasks) {
-    // Sort tasks by most recent first
     final recentTasks = List.from(tasks)
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-    // Take only the 5 most recent tasks
     final displayTasks = recentTasks.take(5).toList();
 
     return Container(
@@ -608,10 +820,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                 ),
               ),
               TextButton(
-                onPressed: () {
-                  // Navigate to activity log
-                  _tabController.animateTo(1); // Switch to Tasks tab
-                },
+                onPressed: () => _tabController.animateTo(1),
                 child: Text(
                   "View All",
                   style: GoogleFonts.poppins(
@@ -645,18 +854,16 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
               )
               : Column(
                 children:
-                    displayTasks.map((task) {
-                      return _buildActivityItem(task);
-                    }).toList(),
+                    displayTasks
+                        .map((task) => _buildActivityItem(task))
+                        .toList(),
               ),
         ],
       ),
     );
   }
 
-  // ✅ UPDATED: Added aborted status handling
   Widget _buildActivityItem(dynamic task) {
-    // Get status color and icon
     Color statusColor;
     IconData statusIcon;
     switch (task.status) {
@@ -672,9 +879,13 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
         statusColor = Colors.green;
         statusIcon = Icons.check_circle_rounded;
         break;
-      case 'aborted': // ✅ ADDED
+      case 'abort':
         statusColor = const Color(0xFFF44336);
         statusIcon = Icons.cancel_rounded;
+        break;
+      case 'forward':
+        statusColor = const Color(0xFF2196F3);
+        statusIcon = Icons.forward_rounded;
         break;
       default:
         statusColor = Colors.grey;
@@ -688,11 +899,15 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: InkWell(
-        onTap: () {
-          Navigator.push(
+        onTap: () async {
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => TaskDetailPage(task: task)),
           );
+          // ✅ FIXED: Refresh after viewing task details
+          if (result == true) {
+            _refreshData();
+          }
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -749,34 +964,39 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF6C63FF).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CreateTaskPage(editTask: task),
-                        ),
-                      );
-                    },
+              if (task.status != 'completed' && task.status != 'abort')
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6C63FF).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
-                    child: const Padding(
-                      padding: EdgeInsets.all(6),
-                      child: Icon(
-                        Icons.edit_outlined,
-                        size: 16,
-                        color: Color(0xFF6C63FF),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CreateTaskPage(editTask: task),
+                          ),
+                        );
+                        // ✅ FIXED: Refresh after editing task
+                        if (result == true) {
+                          _refreshData();
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: const Padding(
+                        padding: EdgeInsets.all(6),
+                        child: Icon(
+                          Icons.edit_outlined,
+                          size: 16,
+                          color: Color(0xFF6C63FF),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
@@ -785,12 +1005,16 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
   }
 
   Widget _buildTasksTab(List tasks) {
-    // ✅ UPDATED: Exclude aborted tasks from active tasks
     final active =
         tasks
-            .where((t) => t.status != 'completed' && t.status != 'aborted')
+            .where(
+              (t) =>
+                  t?.status != 'completed' &&
+                  t?.status != 'abort' &&
+                  t?.status != 'forward',
+            )
             .toList();
-    final completed = tasks.where((t) => t.status == 'completed').toList();
+    final completed = tasks.where((t) => t?.status == 'completed').toList();
 
     return DefaultTabController(
       length: 2,
@@ -822,10 +1046,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
           Expanded(
             child: TabBarView(
               children: [
-                // Active Tasks
                 _buildTaskList(active, isCompleted: false),
-
-                // Completed Tasks
                 _buildTaskList(completed, isCompleted: true),
               ],
             ),
@@ -856,11 +1077,14 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
             const SizedBox(height: 8),
             if (!isCompleted)
               ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
+                onPressed: () async {
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const CreateTaskPage()),
                   );
+                  if (result == true) {
+                    _refreshData();
+                  }
                 },
                 icon: const Icon(Icons.add),
                 label: const Text("Create Task"),
@@ -884,16 +1108,13 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
     );
   }
 
-  // ✅ UPDATED: Added aborted status handling
   Widget _buildEnhancedTaskItem(
     BuildContext context,
     dynamic task, {
     bool isCompleted = false,
   }) {
-    // Get priority color
     final priorityColor = _getPriorityColor(task.priority);
 
-    // Get status color and icon
     Color statusColor;
     IconData statusIcon;
     switch (task.status) {
@@ -909,36 +1130,44 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
         statusColor = Colors.green;
         statusIcon = Icons.check_circle_rounded;
         break;
-      case 'aborted': // ✅ ADDED
+      case 'abort':
         statusColor = const Color(0xFFF44336);
         statusIcon = Icons.cancel_rounded;
+        break;
+      case 'forward':
+        statusColor = const Color(0xFF2196F3);
+        statusIcon = Icons.forward_rounded;
         break;
       default:
         statusColor = Colors.grey;
         statusIcon = Icons.help_outline_rounded;
     }
 
-    // Calculate due date status
     final now = DateTime.now();
     final dueDate = task.dueDate;
     final isOverdue =
         dueDate.isBefore(now) &&
         task.status != 'completed' &&
-        task.status != 'aborted'; // ✅ UPDATED
+        task.status != 'abort' &&
+        task.status != 'forward';
     final isDueSoon =
         dueDate.difference(now).inDays <= 2 &&
         !isOverdue &&
         task.status != 'completed' &&
-        task.status != 'aborted'; // ✅ UPDATED
+        task.status != 'abort' &&
+        task.status != 'forward';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: InkWell(
-        onTap: () {
-          Navigator.push(
+        onTap: () async {
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => TaskDetailPage(task: task)),
           );
+          if (result == true) {
+            _refreshData();
+          }
         },
         borderRadius: BorderRadius.circular(16),
         child: Container(
@@ -961,7 +1190,6 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
           ),
           child: Column(
             children: [
-              // Task header with status, priority, and edit button
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -1006,63 +1234,67 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF6C63FF).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => CreateTaskPage(editTask: task),
-                              ),
-                            );
-                          },
+                    if (task.status != 'completed' && task.status != 'abort')
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6C63FF).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
-                          child: const Padding(
-                            padding: EdgeInsets.all(6),
-                            child: Icon(
-                              Icons.edit_outlined,
-                              size: 16,
-                              color: Color(0xFF6C63FF),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (_) => CreateTaskPage(editTask: task),
+                                ),
+                              );
+                              if (result == true) {
+                                _refreshData();
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: const Padding(
+                              padding: EdgeInsets.all(6),
+                              child: Icon(
+                                Icons.edit_outlined,
+                                size: 16,
+                                color: Color(0xFF6C63FF),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
-
-              // Task content
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Task title
                     Text(
                       task.title,
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color:
-                            (isCompleted || task.status == 'aborted')
+                            (isCompleted ||
+                                    task.status == 'abort' ||
+                                    task.status == 'forward')
                                 ? Colors.black54
-                                : Colors.black87, // ✅ UPDATED
+                                : Colors.black87,
                         decoration:
-                            (isCompleted || task.status == 'aborted')
+                            (isCompleted ||
+                                    task.status == 'abort' ||
+                                    task.status == 'forward')
                                 ? TextDecoration.lineThrough
-                                : null, // ✅ UPDATED
+                                : null,
                       ),
                     ),
                     const SizedBox(height: 8),
-
-                    // Task description (truncated)
                     Text(
                       task.description.length > 100
                           ? '${task.description.substring(0, 100)}...'
@@ -1073,11 +1305,8 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // Task metadata
                     Row(
                       children: [
-                        // Due date
                         Expanded(
                           child: Row(
                             children: [
@@ -1134,8 +1363,6 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                             ],
                           ),
                         ),
-
-                        // Assignees
                         Expanded(
                           child: Row(
                             children: [
@@ -1209,24 +1436,13 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
           );
         }
 
-        return Column(
-          children: [
-            // Team members list
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: users.length,
-                itemBuilder: (context, index) {
-                  final user = users[index];
-                  return _buildTeamMemberCard(
-                    user.username,
-                    user.email,
-                    user.role,
-                  );
-                },
-              ),
-            ),
-          ],
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: users.length,
+          itemBuilder: (context, index) {
+            final user = users[index];
+            return _buildTeamMemberCard(user.username, user.email, user.role);
+          },
         );
       },
       loading:
@@ -1249,7 +1465,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
                 ),
                 const SizedBox(height: 8),
                 ElevatedButton(
-                  onPressed: () => ref.refresh(userListProvider),
+                  onPressed: _refreshData,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF6C63FF),
                   ),
@@ -1275,70 +1491,62 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
           ),
         ],
       ),
-      child: Column(
-        children: [
-          // Header with avatar and basic info
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
-                  child: Text(
-                    name[0].toUpperCase(),
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF6C63FF),
-                    ),
-                  ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
+              child: Text(
+                name[0].toUpperCase(),
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF6C63FF),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      Text(
-                        email,
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.black54,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6C63FF).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    role.toUpperCase(),
-                    style: GoogleFonts.poppins(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF6C63FF),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  Text(
+                    email,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6C63FF).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                role.toUpperCase(),
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF6C63FF),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1367,10 +1575,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () {
-                ref.invalidate(taskListProvider);
-                ref.invalidate(userListProvider);
-              },
+              onPressed: _refreshData,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6C63FF),
                 padding: const EdgeInsets.symmetric(
@@ -1394,13 +1599,9 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) {
-      return "Good Morning";
-    } else if (hour < 17) {
-      return "Good Afternoon";
-    } else {
-      return "Good Evening";
-    }
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
   }
 
   Color _getPriorityColor(String priority) {
@@ -1422,47 +1623,37 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard>
     final now = DateTime.now();
     final difference = date.difference(now).inDays;
 
-    if (difference == 0) {
-      return "Today";
-    } else if (difference == 1) {
-      return "Tomorrow";
-    } else if (difference > 1 && difference < 7) {
-      return "In $difference days";
-    } else {
-      return DateFormat('MMM d, yyyy').format(date);
-    }
+    if (difference == 0) return "Today";
+    if (difference == 1) return "Tomorrow";
+    if (difference > 1 && difference < 7) return "In $difference days";
+    return DateFormat('MMM d, yyyy').format(date);
   }
 
   String _formatTimeAgo(DateTime dateTime) {
     final difference = DateTime.now().difference(dateTime);
 
-    if (difference.inSeconds < 60) {
-      return "Just now";
-    } else if (difference.inMinutes < 60) {
-      return "${difference.inMinutes}m ago";
-    } else if (difference.inHours < 24) {
-      return "${difference.inHours}h ago";
-    } else if (difference.inDays < 7) {
-      return "${difference.inDays}d ago";
-    } else {
-      return DateFormat('MMM d').format(dateTime);
-    }
+    if (difference.inSeconds < 60) return "Just now";
+    if (difference.inMinutes < 60) return "${difference.inMinutes}m ago";
+    if (difference.inHours < 24) return "${difference.inHours}h ago";
+    if (difference.inDays < 7) return "${difference.inDays}d ago";
+    return DateFormat('MMM d').format(dateTime);
   }
 }
 
-// ✅ UPDATED: Added aborted parameter to DonutChartPainter
 class DonutChartPainter extends CustomPainter {
   final int inProgress;
   final int pending;
   final int completed;
-  final int aborted; // ✅ ADDED
+  final int abort;
+  final int forward;
   final int total;
 
   DonutChartPainter({
     required this.inProgress,
     required this.pending,
     required this.completed,
-    required this.aborted, // ✅ ADDED
+    required this.abort,
+    required this.forward,
     required this.total,
   });
 
@@ -1478,15 +1669,14 @@ class DonutChartPainter extends CustomPainter {
           ..strokeWidth = strokeWidth
           ..strokeCap = StrokeCap.round;
 
-    // Calculate angles
     final inProgressAngle = (inProgress / total) * 2 * 3.14159;
     final pendingAngle = (pending / total) * 2 * 3.14159;
     final completedAngle = (completed / total) * 2 * 3.14159;
-    final abortedAngle = (aborted / total) * 2 * 3.14159; // ✅ ADDED
+    final abortedAngle = (abort / total) * 2 * 3.14159;
+    final forwardedAngle = (forward / total) * 2 * 3.14159;
 
-    double startAngle = -3.14159 / 2; // Start from top
+    double startAngle = -3.14159 / 2;
 
-    // Draw in progress arc
     if (inProgress > 0) {
       paint.color = const Color(0xFF6C63FF);
       canvas.drawArc(
@@ -1499,7 +1689,6 @@ class DonutChartPainter extends CustomPainter {
       startAngle += inProgressAngle;
     }
 
-    // Draw pending arc
     if (pending > 0) {
       paint.color = const Color(0xFFFF9800);
       canvas.drawArc(
@@ -1512,7 +1701,6 @@ class DonutChartPainter extends CustomPainter {
       startAngle += pendingAngle;
     }
 
-    // Draw completed arc
     if (completed > 0) {
       paint.color = const Color(0xFF4CAF50);
       canvas.drawArc(
@@ -1525,13 +1713,24 @@ class DonutChartPainter extends CustomPainter {
       startAngle += completedAngle;
     }
 
-    // ✅ ADDED: Draw aborted arc
-    if (aborted > 0) {
+    if (abort > 0) {
       paint.color = const Color(0xFFF44336);
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
         startAngle,
         abortedAngle,
+        false,
+        paint,
+      );
+      startAngle += abortedAngle;
+    }
+
+    if (forward > 0) {
+      paint.color = const Color(0xFF2196F3);
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
+        startAngle,
+        forwardedAngle,
         false,
         paint,
       );

@@ -179,7 +179,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              "Division: ${user.division}",
+              user.division,
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,

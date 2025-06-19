@@ -250,7 +250,7 @@ class _AdminDrawerState extends ConsumerState<AdminDrawer>
                               user?.division ?? "Division",
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.9),
-                                fontSize: 9,
+                                fontSize: 8,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
