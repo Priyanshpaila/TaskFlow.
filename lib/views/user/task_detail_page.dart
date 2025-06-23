@@ -17,17 +17,26 @@ class TaskDetailPage extends ConsumerStatefulWidget {
 
 class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
   final commentController = TextEditingController();
-
+  bool isSubmitting = false;
   void _submitComment() async {
     if (commentController.text.trim().isEmpty) return;
-    final commentService = ref.read(commentServiceProvider);
-    await commentService.addComment(
-      widget.task.id,
-      commentController.text.trim(),
-    );
-    commentController.clear();
-    ref.refresh(commentListProvider(widget.task.id));
-    ref.invalidate(commentServiceProvider);
+
+    setState(() => isSubmitting = true);
+
+    try {
+      final commentService = ref.read(commentServiceProvider);
+      await commentService.addComment(
+        widget.task.id,
+        commentController.text.trim(),
+      );
+      commentController.clear();
+      ref.refresh(commentListProvider(widget.task.id));
+      ref.invalidate(commentServiceProvider);
+    } finally {
+      if (mounted) {
+        setState(() => isSubmitting = false);
+      }
+    }
   }
 
   Color _getStatusColor(String status) {
@@ -640,13 +649,25 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                       child: InkWell(
                         onTap: _submitComment,
                         borderRadius: BorderRadius.circular(24),
-                        child: const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Icon(
-                            Icons.send_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child:
+                              isSubmitting
+                                  ? const SizedBox(
+                                    height: 18,
+                                    width: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                  : const Icon(
+                                    Icons.send_rounded,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
                         ),
                       ),
                     ),
@@ -749,7 +770,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
 
   Widget _buildCommentItem(dynamic comment, DateTime localTime) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(16),
@@ -765,7 +786,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
               gradient: const LinearGradient(
                 colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)],
               ),
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
                   color: const Color(0xFF8B5CF6).withOpacity(0.3),
@@ -780,12 +801,12 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontSize: 14,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -796,7 +817,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                       comment.username,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontSize: 12,
                         color: Color(0xFF1E293B),
                       ),
                     ),
@@ -813,7 +834,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                       child: Text(
                         "${DateFormat('MMM d').format(localTime)} at ${DateFormat('h:mm a').format(localTime)}",
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 10,
                           color: Color(0xFF64748B),
                           fontWeight: FontWeight.w500,
                         ),

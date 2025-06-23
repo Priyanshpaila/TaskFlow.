@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, unnecessary_null_comparison
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -267,6 +267,18 @@ class _TaskCardState extends State<TaskCard>
                                           ),
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    if (widget.task.createdBy != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          'Created by: ${widget.task.createdByUsername ?? widget.task.createdBy}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade500,
+                                            fontStyle: FontStyle.italic,
+                                          ),
                                         ),
                                       ),
                                   ],

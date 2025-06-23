@@ -115,10 +115,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         _showSuccessToast(context);
         Future.delayed(const Duration(milliseconds: 1500), () {
           if (!mounted) return;
-          Navigator.pushReplacementNamed(
-            context,
-            user.role == 'admin' ? '/admin' : '/user',
-          );
+          if (user.role == 'admin') {
+            Navigator.pushReplacementNamed(context, '/admin');
+          } else if (user.role == 'super_admin') {
+            Navigator.pushReplacementNamed(context, '/superadmin');
+          } else {
+            Navigator.pushReplacementNamed(context, '/user');
+          }
         });
       } else {
         _triggerShake();

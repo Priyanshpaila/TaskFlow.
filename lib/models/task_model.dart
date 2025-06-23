@@ -10,6 +10,7 @@ class Task {
   final String createdBy;
   final String division;
   final String? reason; // ✅ New field
+  String? createdByUsername;
 
   Task({
     required this.id,
@@ -46,7 +47,7 @@ class Task {
             : json['createdBy']['_id'],
     division: json['division'] ?? '',
     reason: json['reason'], // ✅ Deserialize reason
-  );
+  )..createdByUsername = json['createdBy'] is Map ? json['createdBy']['username'] : null;
 
   /// ✅ Convert Task to JSON
   Map<String, dynamic> toJson() => {

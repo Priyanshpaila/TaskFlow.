@@ -14,9 +14,12 @@ final taskListProvider = FutureProvider<List<Task>>((ref) async {
     return []; // or: throw Exception("No user session")
   }
 
-  if (auth.role == 'admin') {
+  if (auth.role == 'super_admin') {
+    return taskService.fetchAllTasksForSuperAdmin();
+  } else if(auth.role == 'admin')  {
     return taskService.fetchAllTasks();
-  } else {
+  }
+  else {
     return taskService.fetchMyTasks();
   }
 });
